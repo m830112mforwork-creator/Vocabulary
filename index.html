@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Plus 單字大冒險</title>
+    <title>A Plus Spelling Adventure | 單字闖關大冒險</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -13,94 +13,368 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto+Sans+TC', sans-serif; }
-    </style>
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px) rotate(-3deg); } 40%, 80% { transform: translateX(5px) rotate(3deg); } }
+        .anim-shake { animation: shake 0.4s ease-in-out; }
+        @keyframes popOut { 0% { transform: scale(1); } 50% { transform: scale(1.15) translateY(-5px); background-color: #4ade80; color: white; } 100% { transform: scale(1); background-color: #4ade80; color: white; } }
+        .anim-pop { animation: popOut 0.5s ease-in-out forwards; }
+        .wood-bg { background-color: #fef3c7; background-image: radial-gradient(#fde68a 2px, transparent 2px); background-size: 32px 32px; }
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(1); } }
+        .anim-float-up { animation: floatUp 1.2s forwards; pointer-events: none; }
+    </script>
 </head>
-<body class="bg-slate-50">
+<body class="wood-bg">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useCallback, useRef } = React;
 
-        // 圖示組件：修正 Lucide 在 React 模式下的渲染問題
+        // 圖示組件
         const Icon = ({ name, size = 24, className = "" }) => {
-            const iconRef = useRef(null);
-            useEffect(() => {
-                if (window.lucide) {
-                    window.lucide.createIcons();
-                }
-            }, [name]);
+            const ref = useRef(null);
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
             return <i data-lucide={name} style={{width: size, height: size}} className={`inline-block ${className}`}></i>;
         };
 
-        const App = () => {
-            const [appState, setAppState] = useState('selectMode'); // selectMode, playing, finished
-            const [score, setScore] = useState(0);
-            const [timeElapsed, setTimeElapsed] = useState(0);
+        // 圖片安全組件
+        const SafeImage = ({ src, word }) => {
+            const [imgSrc, setImgSrc] = useState(src);
+            const [status, setStatus] = useState('loading');
+            useEffect(() => { setImgSrc(src); setStatus('loading'); }, [src]);
+            return (
+                <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-white rounded-xl overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center bg-orange-50 text-orange-200">
+                        <Icon name="help-circle" size={64} />
+                    </div>
+                    <img src={imgSrc} alt={word} className={`w-full h-full object-contain relative z-10 ${status === 'loading' ? 'opacity-0' : 'opacity-100'}`}
+                        onLoad={() => setStatus('success')} 
+                        onError={() => setImgSrc(`https://api.dicebear.com/9.x/bottts/svg?seed=${word}`)} />
+                </div>
+            );
+        };
 
-            // 格式化時間
-            const formatTime = (seconds) => {
-                const mins = Math.floor(seconds / 60);
-                const secs = seconds % 60;
-                return `${mins}:${secs.toString().padStart(2, '0')}`;
+        const App = () => {
+            const [appState, setAppState] = useState('upload'); // upload, selectMode, edit, playing, gameover, finished
+            const [gameMode, setGameMode] = useState('spelling');
+            const [wordList, setWordList] = useState([]);
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [lives, setLives] = useState(3);
+            const [timeElapsed, setTimeElapsed] = useState(0);
+            const [isMuted, setIsMuted] = useState(false);
+            
+            // 拼字狀態
+            const [shuffledLetters, setShuffledLetters] = useState([]);
+            const [selectedLetters, setSelectedLetters] = useState([]);
+            const [wrongIndexes, setWrongIndexes] = useState([]);
+            
+            // 選擇題狀態
+            const [quizOptions, setQuizOptions] = useState([]);
+            const [wrongQuizOptions, setWrongQuizOptions] = useState([]);
+            
+            // 是非題狀態
+            const [tfQuestion, setTfQuestion] = useState({ word: '', isCorrect: true });
+            
+            // 翻卡狀態
+            const [isFlipped, setIsFlipped] = useState(false);
+            const [correctAnimation, setCorrectAnimation] = useState(false);
+            const [floatingScore, setFloatingScore] = useState(null);
+
+            // 音效輔助
+            const playAudio = useCallback((text) => {
+                if (isMuted || !('speechSynthesis' in window)) return;
+                window.speechSynthesis.cancel();
+                const msg = new SpeechSynthesisUtterance(text);
+                msg.lang = 'en-US';
+                msg.rate = 0.9;
+                window.speechSynthesis.speak(msg);
+            }, [isMuted]);
+
+            // 初始化關卡
+            const initLevel = useCallback((index, mode) => {
+                const wordObj = wordList[index];
+                if (!wordObj) return;
+                setCorrectAnimation(false);
+                setIsFlipped(false);
+                setWrongIndexes([]);
+                setWrongQuizOptions([]);
+
+                if (mode === 'spelling') {
+                    const letters = wordObj.word.split('').map((char, id) => ({ char, id }));
+                    setShuffledLetters([...letters].sort(() => Math.random() - 0.5));
+                    setSelectedLetters(new Array(letters.length).fill(null));
+                } else if (mode === 'quiz' || mode === 'listening') {
+                    const others = wordList.filter(w => w.word !== wordObj.word).sort(() => Math.random() - 0.5).slice(0, 3);
+                    const opts = [...others.map(o => o.word), wordObj.word].sort(() => Math.random() - 0.5);
+                    setQuizOptions(opts);
+                } else if (mode === 'truefalse') {
+                    const isCorrect = Math.random() > 0.5;
+                    const displayWord = isCorrect ? wordObj.word : (wordList[Math.floor(Math.random() * wordList.length)].word);
+                    setTfQuestion({ word: displayWord, isCorrect: displayWord === wordObj.word });
+                }
+
+                if (mode !== 'flashcard') setTimeout(() => playAudio(wordObj.word), 500);
+            }, [wordList, playAudio]);
+
+            // 開始遊戲
+            const startGame = (mode) => {
+                setGameMode(mode);
+                setScore(0);
+                setLives(3);
+                setCurrentIndex(0);
+                setTimeElapsed(0);
+                setAppState('playing');
+                initLevel(0, mode);
             };
 
-            // 這裡可以繼續放入你完整的單字邏輯 (Word List, Timer, Logic)
-            // 先提供一個基礎架構確保你能順利 Commit 並看到畫面
+            // 處理 Excel 上傳
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const bstr = evt.target.result;
+                    const wb = XLSX.read(bstr, { type: 'binary' });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                    const parsed = data
+                        .filter(r => r[0] && /^[a-zA-Z\s]+$/.test(String(r[0])))
+                        .map(r => ({ word: String(r[0]).trim().toLowerCase(), translation: String(r[1] || ''), image: null, hasFetched: false }));
+                    
+                    setWordList(parsed);
+                    setAppState('selectMode');
+                };
+                reader.readAsBinaryString(file);
+            };
+
+            // 抓取圖片邏輯
+            useEffect(() => {
+                if (wordList.length > 0 && (appState === 'playing' || appState === 'selectMode')) {
+                    const current = wordList[currentIndex];
+                    if (current && !current.hasFetched) {
+                        fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(current.word)}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                const newImg = data.thumbnail ? data.thumbnail.source : null;
+                                const newList = [...wordList];
+                                newList[currentIndex].image = newImg;
+                                newList[currentIndex].hasFetched = true;
+                                setWordList(newList);
+                            }).catch(() => {
+                                const newList = [...wordList];
+                                newList[currentIndex].hasFetched = true;
+                                setWordList(newList);
+                            });
+                    }
+                }
+            }, [currentIndex, appState, wordList]);
+
+            // 計時器
+            useEffect(() => {
+                let timer;
+                if (appState === 'playing') timer = setInterval(() => setTimeElapsed(s => s + 1), 1000);
+                return () => clearInterval(timer);
+            }, [appState]);
+
+            // 拼字邏輯
+            const selectLetter = (letterObj) => {
+                const firstNull = selectedLetters.findIndex(l => l === null);
+                if (firstNull === -1) return;
+                const newSelected = [...selectedLetters];
+                newSelected[firstNull] = letterObj;
+                setSelectedLetters(newSelected);
+                setShuffledLetters(shuffledLetters.filter(l => l.id !== letterObj.id));
+
+                // 檢查是否拼完
+                if (newSelected.every(l => l !== null)) {
+                    const result = newSelected.map(l => l.char).join('');
+                    if (result === wordList[currentIndex].word) {
+                        handleCorrect();
+                    } else {
+                        handleWrong();
+                        // 彈回字母
+                        setTimeout(() => {
+                            setShuffledLetters([...shuffledLetters, letterObj].sort(() => Math.random() - 0.5));
+                            setSelectedLetters(new Array(wordList[currentIndex].word.length).fill(null));
+                        }, 500);
+                    }
+                }
+            };
+
+            const handleCorrect = () => {
+                setCorrectAnimation(true);
+                setScore(s => s + 10);
+                setFloatingScore({ val: 10, id: Date.now() });
+                setTimeout(() => {
+                    if (currentIndex + 1 < wordList.length) {
+                        setCurrentIndex(c => c + 1);
+                        initLevel(currentIndex + 1, gameMode);
+                    } else {
+                        setAppState('finished');
+                    }
+                }, 1000);
+            };
+
+            const handleWrong = () => {
+                setLives(l => {
+                    if (l <= 1) { setAppState('gameover'); return 0; }
+                    return l - 1;
+                });
+                setWrongIndexes([0]); // 觸發震動
+                setTimeout(() => setWrongIndexes([]), 400);
+            };
 
             return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-4">
-                    {appState === 'selectMode' && (
-                        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-4 border-sky-100 text-center max-w-md w-full">
-                            <div className="bg-sky-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Icon name="graduation-cap" size={48} className="text-sky-500" />
+                <div className="min-h-screen flex flex-col items-center max-w-4xl mx-auto p-4 relative overflow-hidden">
+                    {/* Header */}
+                    <header className="w-full flex justify-between items-center py-4 px-6 bg-white/80 backdrop-blur rounded-2xl shadow-sm mb-6 border-b-4 border-slate-200">
+                        <h1 className="text-2xl font-black text-orange-600 flex items-center gap-2 cursor-pointer" onClick={() => setAppState('upload')}>
+                            <Icon name="zap" size={28} /> A Plus Adventure
+                        </h1>
+                        {appState === 'playing' && (
+                            <div className="flex items-center gap-4 font-bold text-slate-600">
+                                <div className="flex items-center gap-1"><Icon name="heart" size={18} className="text-red-500 fill-red-500" /> {lives}</div>
+                                <div className="flex items-center gap-1"><Icon name="star" size={18} className="text-yellow-500 fill-yellow-500" /> {score}</div>
+                                <div className="flex items-center gap-1"><Icon name="clock" size={18} /> {Math.floor(timeElapsed/60)}:{(timeElapsed%60).toString().padStart(2,'0')}</div>
                             </div>
-                            <h1 className="text-3xl font-black text-slate-800 mb-2">A Plus Vocabulary</h1>
-                            <p className="text-slate-500 mb-8">準備好開始你的單字挑戰了嗎？</p>
-                            <button 
-                                onClick={() => setAppState('playing')}
-                                className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-2xl shadow-lg transition-all transform hover:scale-[1.02]"
-                            >
-                                開始遊戲
-                            </button>
-                        </div>
-                    )}
+                        )}
+                        <button onClick={() => setIsMuted(!isMuted)} className="p-2 rounded-full hover:bg-slate-100">
+                            <Icon name={isMuted ? "volume-x" : "volume-2"} />
+                        </button>
+                    </header>
 
-                    {appState === 'playing' && (
-                        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
-                            <div className="flex justify-between items-center mb-8">
-                                <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full font-bold">
-                                    <Icon name="clock" size={20} className="text-sky-500" />
-                                    <span>{formatTime(timeElapsed)}</span>
+                    {floatingScore && <div key={floatingScore.id} className="fixed top-1/2 left-1/2 z-50 text-5xl font-black text-yellow-400 anim-float-up">+{floatingScore.val}</div>}
+
+                    <main className="w-full flex-1 flex flex-col items-center justify-center">
+                        {appState === 'upload' && (
+                            <div className="bg-white p-12 rounded-[3rem] shadow-xl border-4 border-orange-100 text-center max-w-lg w-full">
+                                <Icon name="upload-cloud" size={80} className="text-orange-400 mb-6 mx-auto" />
+                                <h2 className="text-3xl font-black text-slate-800 mb-4">歡迎來到單字大冒險</h2>
+                                <p className="text-slate-500 mb-8 font-medium">請上傳包含單字的 Excel 檔案<br/><span className="text-sm bg-orange-50 px-2 py-1 rounded text-orange-600">A 欄：英文單字 | B 欄：中文翻譯</span></p>
+                                <label className="block w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-5 rounded-2xl shadow-lg cursor-pointer transition-transform active:scale-95">
+                                    上傳 Excel
+                                    <input type="file" className="hidden" accept=".xlsx" onChange={handleFileUpload} />
+                                </label>
+                            </div>
+                        )}
+
+                        {appState === 'selectMode' && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full px-4 animate-[fadeIn_0.5s]">
+                                {[
+                                    { id: 'spelling', title: '拼字挑戰', icon: 'type', desc: '動手拼出正確單字', color: 'sky' },
+                                    { id: 'quiz', title: '看圖選字', icon: 'mouse-pointer', desc: '四選一反應挑戰', color: 'green' },
+                                    { id: 'listening', title: '聽力特訓', icon: 'ear', desc: '專注發音辨識', color: 'indigo' },
+                                    { id: 'truefalse', title: '是非大考驗', icon: 'check-square', desc: '極速配對判斷', color: 'rose' },
+                                    { id: 'flashcard', title: '單字閃卡', icon: 'book-open', desc: '自主複習模式', color: 'purple' },
+                                ].map(m => (
+                                    <button key={m.id} onClick={() => startGame(m.id)} className={`bg-white p-8 rounded-[2rem] border-4 border-slate-100 shadow-lg hover:-translate-y-2 transition-all flex flex-col items-center group`}>
+                                        <div className={`p-4 rounded-full mb-4 bg-${m.color}-50 text-${m.color}-500 group-hover:bg-${m.color}-500 group-hover:text-white transition-colors`}><Icon name={m.icon} size={40} /></div>
+                                        <h3 className="text-2xl font-black text-slate-800 mb-2">{m.title}</h3>
+                                        <p className="text-slate-500">{m.desc}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {appState === 'playing' && wordList[currentIndex] && (
+                            <div className={`w-full max-w-2xl flex flex-col items-center ${wrongIndexes.length > 0 ? 'anim-shake' : ''}`}>
+                                {/* 卡片區 */}
+                                <div className="relative w-full aspect-[4/3] sm:aspect-video mb-10 group">
+                                    <div className={`w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+                                        {/* 正面 */}
+                                        <div className="absolute inset-0 backface-hidden bg-white rounded-[2.5rem] shadow-2xl border-8 border-white p-4">
+                                            {gameMode === 'listening' ? (
+                                                <div className="w-full h-full bg-indigo-500 rounded-2xl flex flex-col items-center justify-center text-white cursor-pointer" onClick={() => playAudio(wordList[currentIndex].word)}>
+                                                    <Icon name="volume-2" size={100} className="animate-pulse mb-4" />
+                                                    <span className="text-2xl font-black">點擊播放聲音</span>
+                                                </div>
+                                            ) : (
+                                                <SafeImage src={wordList[currentIndex].image} word={wordList[currentIndex].word} />
+                                            )}
+                                            <button onClick={() => playAudio(wordList[currentIndex].word)} className="absolute bottom-6 right-6 bg-orange-500 text-white p-4 rounded-full shadow-lg active:scale-90 transition-transform z-20">
+                                                <Icon name="volume-2" size={32} />
+                                            </button>
+                                        </div>
+                                        {/* 反面 (僅閃卡使用) */}
+                                        <div className="absolute inset-0 backface-hidden rotate-y-180 bg-gradient-to-br from-orange-400 to-orange-600 rounded-[2.5rem] shadow-2xl flex flex-col items-center justify-center text-white p-8">
+                                            <h2 className="text-6xl font-black mb-4">{wordList[currentIndex].word}</h2>
+                                            <p className="text-3xl font-bold bg-white/20 px-8 py-3 rounded-full">{wordList[currentIndex].translation}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-2xl font-black text-sky-600">Score: {score}</div>
-                            </div>
-                            <div className="text-center py-20">
-                                <h2 className="text-5xl font-bold text-slate-800 mb-4 text-center">Apple</h2>
-                                <p className="text-xl text-slate-400">請輸入正確的中文翻譯</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <button onClick={() => {setScore(s=>s+10); setAppState('finished')}} className="p-4 bg-slate-50 hover:bg-sky-50 border-2 border-slate-100 rounded-2xl font-bold transition-all text-xl">蘋果</button>
-                                <button className="p-4 bg-slate-50 hover:bg-sky-50 border-2 border-slate-100 rounded-2xl font-bold transition-all text-xl">香蕉</button>
-                            </div>
-                        </div>
-                    )}
 
-                    {appState === 'finished' && (
-                        <div className="bg-white p-10 rounded-[3rem] text-center shadow-2xl border-8 border-yellow-400 max-w-lg w-full">
-                            <Icon name="trophy" size={100} className="text-yellow-500 mx-auto mb-6" />
-                            <h2 className="text-4xl font-black mb-6 text-slate-800">太棒了！</h2>
-                            <div className="bg-slate-50 rounded-2xl p-6 mb-8">
-                                <p className="text-xl mb-2 font-bold text-slate-600">最終得分</p>
-                                <p className="text-5xl font-black text-sky-500">{score}</p>
+                                {/* 互動區 */}
+                                {gameMode === 'spelling' && (
+                                    <div className="w-full">
+                                        <div className="flex flex-wrap justify-center gap-3 mb-8 min-h-[5rem]">
+                                            {selectedLetters.map((l, i) => (
+                                                <div key={i} className={`w-14 h-16 sm:w-16 sm:h-20 flex items-center justify-center text-4xl font-black rounded-2xl border-4 transition-all ${l ? 'bg-white border-orange-300 shadow-md text-slate-800' : 'bg-slate-200/50 border-dashed border-slate-300 text-transparent'}`}>
+                                                    {l?.char}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex flex-wrap justify-center gap-3">
+                                            {shuffledLetters.map((l) => (
+                                                <button key={l.id} onClick={() => selectLetter(l)} className="w-14 h-16 sm:w-16 sm:h-16 bg-orange-500 text-white text-3xl font-black rounded-2xl shadow-[0_6px_0_0_rgba(194,65,12,1)] active:translate-y-1 active:shadow-none transition-all">
+                                                    {l.char}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {(gameMode === 'quiz' || gameMode === 'listening') && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                                        {quizOptions.map((opt, i) => (
+                                            <button key={i} onClick={() => opt === wordList[currentIndex].word ? handleCorrect() : handleWrong()} className="bg-white p-6 rounded-2xl border-4 border-slate-100 text-2xl font-black text-slate-700 shadow-lg hover:border-orange-300 transition-all active:scale-95">
+                                                {opt}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {gameMode === 'truefalse' && (
+                                    <div className="flex flex-col items-center w-full">
+                                        <div className="bg-white px-12 py-6 rounded-3xl shadow-xl text-4xl font-black mb-8 border-4 border-slate-100">{tfQuestion.word}</div>
+                                        <div className="flex gap-6 w-full max-w-sm">
+                                            <button onClick={() => tfQuestion.isCorrect ? handleCorrect() : handleWrong()} className="flex-1 bg-green-500 text-white py-6 rounded-3xl text-5xl font-black shadow-lg active:scale-95">O</button>
+                                            <button onClick={() => !tfQuestion.isCorrect ? handleCorrect() : handleWrong()} className="flex-1 bg-red-500 text-white py-6 rounded-3xl text-5xl font-black shadow-lg active:scale-95">X</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {gameMode === 'flashcard' && (
+                                    <div className="flex gap-4 w-full max-w-sm">
+                                        <button onClick={() => setIsFlipped(!isFlipped)} className="flex-1 bg-white py-6 rounded-3xl font-black text-2xl shadow-lg flex items-center justify-center gap-2"><Icon name="refresh-ccw" /> 翻轉</button>
+                                        <button onClick={() => { if(currentIndex + 1 < wordList.length) { setCurrentIndex(c=>c+1); initLevel(currentIndex+1, 'flashcard'); } else setAppState('finished'); }} className="flex-1 bg-purple-500 text-white py-6 rounded-3xl font-black text-2xl shadow-lg active:scale-95">下一個</button>
+                                    </div>
+                                )}
                             </div>
-                            <button 
-                                onClick={() => {setAppState('selectMode'); setScore(0);}}
-                                className="bg-sky-500 text-white px-10 py-4 rounded-2xl font-black text-xl hover:bg-sky-600 transition-all shadow-lg"
-                            >
-                                再玩一次
-                            </button>
-                        </div>
-                    )}
+                        )}
+
+                        {appState === 'gameover' && (
+                            <div className="bg-slate-900/90 p-12 rounded-[3rem] text-center text-white border-4 border-slate-700 max-w-lg w-full">
+                                <Icon name="x-circle" size={100} className="text-red-500 mx-auto mb-6" />
+                                <h2 className="text-5xl font-black mb-4 text-red-400">GAME OVER</h2>
+                                <p className="text-2xl mb-8">別氣餒，下次會更好！</p>
+                                <button onClick={() => setAppState('selectMode')} className="w-full bg-white text-slate-900 py-5 rounded-2xl font-black text-xl shadow-lg">回到選單</button>
+                            </div>
+                        )}
+
+                        {appState === 'finished' && (
+                            <div className="bg-white p-12 rounded-[3rem] text-center border-8 border-yellow-400 shadow-2xl max-w-lg w-full">
+                                <Icon name="trophy" size={120} className="text-yellow-500 mx-auto mb-6" />
+                                <h2 className="text-4xl font-black text-slate-800 mb-6">全關卡達成！</h2>
+                                <div className="grid grid-cols-2 gap-4 mb-8">
+                                    <div className="bg-slate-50 p-4 rounded-2xl"><p className="text-slate-500">得分</p><p className="text-3xl font-black text-orange-500">{score}</p></div>
+                                    <div className="bg-slate-50 p-4 rounded-2xl"><p className="text-slate-500">時間</p><p className="text-3xl font-black text-sky-500">{Math.floor(timeElapsed/60)}:{(timeElapsed%60).toString().padStart(2,'0')}</p></div>
+                                </div>
+                                <button onClick={() => setAppState('selectMode')} className="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-2xl shadow-lg">再來一次</button>
+                            </div>
+                        )}
+                    </main>
                 </div>
             );
         };
