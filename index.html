@@ -3,22 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spelling Adventure - 單字闖關大冒險</title>
+    <title>A Plus 單字大冒險</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto+Sans+TC', sans-serif; }
+    </style>
 </head>
-<body>
+<body class="bg-slate-50">
     <div id="root"></div>
 
     <script type="text/babel">
-        // 從全域變數取得常用的 Hook
         const { useState, useEffect, useCallback, useRef } = React;
-        
-        // 為了讓 Lucide 圖示在 React 中運作，我們定義一個簡單的組件
+
+        // 圖示組件：修正 Lucide 在 React 模式下的渲染問題
         const Icon = ({ name, size = 24, className = "" }) => {
             const iconRef = useRef(null);
             useEffect(() => {
@@ -26,45 +29,78 @@
                     window.lucide.createIcons();
                 }
             }, [name]);
-            return <i data-lucide={name} style={{width: size, height: size}} className={className}></i>;
-        };
-
-        // --- 這裡貼入我之前提供給你的 App.js 程式碼核心邏輯 ---
-        // 注意：需將所有的 <Upload />, <Volume2 /> 等組件標籤
-        // 換成 <Icon name="upload" /> 這種形式，或直接使用我下方幫你調整好的版本
-        
-        const SafeImage = ({ src, word }) => {
-            const [imgStatus, setImgStatus] = useState('loading');
-            const [imgSrc, setImgSrc] = useState(src);
-            useEffect(() => { setImgStatus('loading'); setImgSrc(src); }, [src]);
-            return (
-                <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-white rounded-sm overflow-hidden z-10">
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 text-orange-400">
-                        <Icon name="help-circle" size={72} className="opacity-40" />
-                    </div>
-                    {imgStatus === 'loading' && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-20">
-                            <div className="w-10 h-10 border-4 border-orange-300 border-t-orange-500 rounded-full animate-spin"></div>
-                        </div>
-                    )}
-                    {imgSrc && imgStatus !== 'error' && (
-                        <img src={imgSrc} alt={word} className={`w-full h-full object-contain relative z-10 transition-opacity ${imgStatus === 'loading' ? 'opacity-0' : 'opacity-100'}`}
-                            onLoad={() => setImgStatus('success')} onError={() => setImgSrc(`https://api.dicebear.com/9.x/bottts/svg?seed=${word}`)} />
-                    )}
-                </div>
-            );
+            return <i data-lucide={name} style={{width: size, height: size}} className={`inline-block ${className}`}></i>;
         };
 
         const App = () => {
-            // (為了簡潔，這裡省略部分邏輯，建議直接使用先前提供的完整邏輯並確保 Hook 正確)
-            // 提醒：在 HTML 模式下，Lucide 組件要改成 <Icon name="..." />
+            const [appState, setAppState] = useState('selectMode'); // selectMode, playing, finished
+            const [score, setScore] = useState(0);
+            const [timeElapsed, setTimeElapsed] = useState(0);
+
+            // 格式化時間
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            // 這裡可以繼續放入你完整的單字邏輯 (Word List, Timer, Logic)
+            // 先提供一個基礎架構確保你能順利 Commit 並看到畫面
+
             return (
-                <div className="min-h-screen bg-amber-50 flex items-center justify-center">
-                    <div className="text-center p-10 bg-white rounded-3xl shadow-xl border-4 border-orange-200">
-                        <Icon name="trophy" size={64} className="mx-auto text-orange-500 mb-4" />
-                        <h1 className="text-3xl font-black text-slate-800 mb-4">單字大冒險已準備就緒</h1>
-                        <p className="text-slate-500 mb-6">請點擊上方 Commit 提交變更，然後開啟 GitHub Pages 預覽！</p>
-                    </div>
+                <div className="min-h-screen flex flex-col items-center justify-center p-4">
+                    {appState === 'selectMode' && (
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-4 border-sky-100 text-center max-w-md w-full">
+                            <div className="bg-sky-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Icon name="graduation-cap" size={48} className="text-sky-500" />
+                            </div>
+                            <h1 className="text-3xl font-black text-slate-800 mb-2">A Plus Vocabulary</h1>
+                            <p className="text-slate-500 mb-8">準備好開始你的單字挑戰了嗎？</p>
+                            <button 
+                                onClick={() => setAppState('playing')}
+                                className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-2xl shadow-lg transition-all transform hover:scale-[1.02]"
+                            >
+                                開始遊戲
+                            </button>
+                        </div>
+                    )}
+
+                    {appState === 'playing' && (
+                        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                            <div className="flex justify-between items-center mb-8">
+                                <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full font-bold">
+                                    <Icon name="clock" size={20} className="text-sky-500" />
+                                    <span>{formatTime(timeElapsed)}</span>
+                                </div>
+                                <div className="text-2xl font-black text-sky-600">Score: {score}</div>
+                            </div>
+                            <div className="text-center py-20">
+                                <h2 className="text-5xl font-bold text-slate-800 mb-4 text-center">Apple</h2>
+                                <p className="text-xl text-slate-400">請輸入正確的中文翻譯</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button onClick={() => {setScore(s=>s+10); setAppState('finished')}} className="p-4 bg-slate-50 hover:bg-sky-50 border-2 border-slate-100 rounded-2xl font-bold transition-all text-xl">蘋果</button>
+                                <button className="p-4 bg-slate-50 hover:bg-sky-50 border-2 border-slate-100 rounded-2xl font-bold transition-all text-xl">香蕉</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {appState === 'finished' && (
+                        <div className="bg-white p-10 rounded-[3rem] text-center shadow-2xl border-8 border-yellow-400 max-w-lg w-full">
+                            <Icon name="trophy" size={100} className="text-yellow-500 mx-auto mb-6" />
+                            <h2 className="text-4xl font-black mb-6 text-slate-800">太棒了！</h2>
+                            <div className="bg-slate-50 rounded-2xl p-6 mb-8">
+                                <p className="text-xl mb-2 font-bold text-slate-600">最終得分</p>
+                                <p className="text-5xl font-black text-sky-500">{score}</p>
+                            </div>
+                            <button 
+                                onClick={() => {setAppState('selectMode'); setScore(0);}}
+                                className="bg-sky-500 text-white px-10 py-4 rounded-2xl font-black text-xl hover:bg-sky-600 transition-all shadow-lg"
+                            >
+                                再玩一次
+                            </button>
+                        </div>
+                    )}
                 </div>
             );
         };
