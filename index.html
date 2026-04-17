@@ -38,7 +38,6 @@
     @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); } 20% { opacity: 1; transform: translate(-50%, -80%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(1); } }
     .anim-float-up { animation: floatUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; pointer-events: none; }
     
-    /* 捲軸美化 */
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -48,26 +47,10 @@
 <body>
   
   <div id="root"></div>
-<div id="root"></div>
 
-  <script>
-    const __firebase_config = JSON.stringify({
-      apiKey: "AIzaSyDc-sLEwIqWT6l8U8DubOChLIWQAOX_DKE",
-      authDomain: "voc-test-e8783.firebaseapp.com",
-      projectId: "voc-test-e8783",
-      storageBucket: "voc-test-e8783.firebasestorage.app",
-      messagingSenderId: "866197218174",
-      appId: "1:866197218174:web:680acc4d9e643ec8c3c92f",
-      measurementId: "G-QM765CE4LG"
-    });
-    const __app_id = "voc-test-e8783"; 
-  </script>
-
-  <script type="text/babel" data-type="module">
-  // ... 這裡是你原本的 React 程式碼 ...
   <script type="text/babel" data-type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const { useState, useEffect, useCallback, useRef } = React;
@@ -80,39 +63,29 @@
     } = window.LucideReact || {};
 
     // ==========================================
-    // 1. Firebase 初始化設定 (GitHub Pages 部署用)
+    // 1. Firebase 初始化設定 (已接上你的金鑰)
     // ==========================================
-    let app, auth, db, appId = 'default-app-id';
-    
-    // 如果你有 Firebase 專案，請將下方 null 替換為你的設定物件，否則系統會自動進入「本機暫存模式」
-    const firebaseConfig = null; 
-    /* 範例設定：
     const firebaseConfig = {
-      apiKey: "AIzaSy...",
-      authDomain: "your-project.firebaseapp.com",
-      projectId: "your-project",
-      storageBucket: "your-project.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcdef"
+      apiKey: "AIzaSyDc-sLEwIqWT6l8U8DubOChLIWQAOX_DKE",
+      authDomain: "voc-test-e8783.firebaseapp.com",
+      projectId: "voc-test-e8783",
+      storageBucket: "voc-test-e8783.firebasestorage.app",
+      messagingSenderId: "866197218174",
+      appId: "1:866197218174:web:680acc4d9e643ec8c3c92f",
+      measurementId: "G-QM765CE4LG"
     };
-    */
-
+    
+    let app, auth, db, appId = "voc-test-e8783";
+    
     try {
-      if (firebaseConfig) {
-        app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-        console.log("Firebase 初始化成功，已啟用雲端模式。");
-      } else {
-        console.log("未偵測到 Firebase 設定，目前為本機測試模式。");
-      }
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      console.log("Firebase 初始化成功，已啟用雲端模式。");
     } catch(e) {
       console.error("Firebase 初始化失敗:", e);
     }
 
-    // ==========================================
-    // 圖片處理元件
-    // ==========================================
     const SafeImage = ({ src, word }) => {
       const [imgStatus, setImgStatus] = useState('loading');
       const [imgSrc, setImgSrc] = useState(src);
@@ -150,9 +123,6 @@
       );
     };
 
-    // ==========================================
-    // 主應用程式
-    // ==========================================
     const App = () => {
       const [appState, setAppState] = useState('home'); 
       const [gameMode, setGameMode] = useState('spelling'); 
@@ -193,9 +163,7 @@
       const isPlayingRef = useRef(false);
       const questionStartTime = useRef(Date.now());
 
-      // ==========================================
       // Firebase 雲端認證與資料訂閱
-      // ==========================================
       useEffect(() => {
         if (!auth) return;
         const initAuth = async () => {
@@ -220,9 +188,6 @@
         return () => unsubscribe();
       }, [user]);
 
-      // ==========================================
-      // 輔助與音效函式
-      // ==========================================
       const showToast = useCallback((msg, type = 'info') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3000);
@@ -272,9 +237,6 @@
         return `${m}:${s}`;
       }, []);
 
-      // ==========================================
-      // 遊戲互動核心邏輯
-      // ==========================================
       const unselectLetter = useCallback((letterObj, index) => {
         if (!letterObj || correctAnimation || gameMode !== 'spelling') return;
         playDrop();
@@ -532,9 +494,6 @@
         else handleWrongAnswer([-1]); 
       }, [correctAnimation, wrongIndexes, tfIsCorrect, handleCorrectAnswer, handleWrongAnswer]);
 
-      // ==========================================
-      // 上傳與後台功能
-      // ==========================================
       const processWords = useCallback((wordsArray) => {
         const processedList = wordsArray.map(item => ({
           word: item.word.trim().toLowerCase(),
@@ -592,8 +551,7 @@
       };
 
       const handleAdminFileUpload = useCallback(async (e) => {
-        // 放寬檢查，讓無資料庫狀態也能進行本機上傳測試
-        if (!newUnitName.trim()) {
+        if (!newUnitName.trim() && db) {
           showToast("請先輸入單字庫名稱！", "error");
           e.target.value = '';
           return;
@@ -671,9 +629,6 @@
         e.target.value = ''; 
       }, [playSuccess, showToast]);
 
-      // ==========================================
-      // 生命週期 Hooks
-      // ==========================================
       useEffect(() => { isPlayingRef.current = appState === 'playing'; }, [appState]);
 
       useEffect(() => {
@@ -793,9 +748,6 @@
         }
       };
 
-      // ==========================================
-      // 子組件：學習成果清單
-      // ==========================================
       const ResultsList = () => {
         if (!gameHistory || gameHistory.length === 0) return null;
         return (
@@ -834,9 +786,6 @@
         );
       };
 
-      // ==========================================
-      // 渲染主畫面
-      // ==========================================
       return (
         <div className="min-h-screen wood-bg text-slate-800 font-sans selection:bg-orange-200 overflow-x-hidden flex flex-col relative">
           
@@ -933,7 +882,7 @@
                   <div className="bg-white/80 p-8 rounded-[2rem] text-center max-w-lg mb-12 shadow-sm border-2 border-white">
                     <div className="flex justify-center mb-4 text-slate-300">{Database && <Database size={64}/>}</div>
                     <p className="text-2xl font-black text-slate-600 mb-2">目前雲端沒有任何單字庫</p>
-                    <p className="text-slate-500 font-medium">請老師或管理員點擊下方按鈕進入後台建立，<br/>或直接進入後台進行本機測試。</p>
+                    <p className="text-slate-500 font-medium">請老師或管理員點擊下方按鈕進入後台建立。</p>
                   </div>
                 )}
 
