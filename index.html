@@ -629,6 +629,19 @@
         e.target.value = ''; 
       }, [playSuccess, showToast]);
 
+      // ==========================================
+      // 🔑 教師後台登入檢查
+      // ==========================================
+      const handleAdminLogin = useCallback(() => {
+        // 你可以把 "teacher123" 改成你想要的任何密碼
+        const pwd = window.prompt("🔒 請輸入教師專屬密碼：");
+        if (pwd === "teacher123") {
+          setAppState('admin');
+        } else if (pwd !== null) {
+          showToast("密碼錯誤，拒絕存取！", "error");
+        }
+      }, [showToast]);
+
       useEffect(() => { isPlayingRef.current = appState === 'playing'; }, [appState]);
 
       useEffect(() => {
@@ -886,7 +899,7 @@
                   </div>
                 )}
 
-                <button onClick={() => setAppState('admin')} className="bg-slate-800 text-white px-8 py-4 rounded-full font-bold shadow-lg flex items-center gap-3 hover:bg-slate-700 hover:scale-105 transition-all text-lg border-4 border-slate-900">
+                <button onClick={handleAdminLogin} className="bg-slate-800 text-white px-8 py-4 rounded-full font-bold shadow-lg flex items-center gap-3 hover:bg-slate-700 hover:scale-105 transition-all text-lg border-4 border-slate-900">
                   {Settings && <Settings size={24} />} 進入教師後台 (Teacher Mode)
                 </button>
               </div>
