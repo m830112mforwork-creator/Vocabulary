@@ -3,32 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spelling Adventure | 雲端單字學習平台</title>
+  <title>耶加 Spelling Adventure | 雲端單字學習平台</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://unpkg.com/lucide-react/dist/umd/lucide-react.min.js"></script>
   <style>
-    body{margin:0;padding:0;-webkit-font-smoothing:antialiased;user-select:none}
+    body{margin:0;padding:0;-webkit-font-smoothing:antialiased;user-select:none; background-color: #faf8f5;}
     @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px) rotate(-3deg)}40%,80%{transform:translateX(5px) rotate(3deg)}}
     .anim-shake{animation:shake .4s ease-in-out}
-    @keyframes popOut{0%{transform:scale(1)}50%{transform:scale(1.15) translateY(-5px);background-color:#4ade80;color:white;border-color:#16a34a}100%{transform:scale(1);background-color:#4ade80;color:white;border-color:#16a34a}}
+    @keyframes popOut{0%{transform:scale(1)}50%{transform:scale(1.15) translateY(-5px);background-color:#a5b68d;color:white;border-color:#8fa375}100%{transform:scale(1);background-color:#a5b68d;color:white;border-color:#8fa375}}
     .anim-pop{animation:popOut .5s ease-in-out forwards}
     @keyframes slideUp{0%{transform:translate(-50%,20px);opacity:0}100%{transform:translate(-50%,0);opacity:1}}
     @keyframes fadeInUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
     .anim-slide{animation:fadeInUp .35s cubic-bezier(.16,1,.3,1)}
-    @keyframes quizCorrect{0%{transform:scale(1)}50%{transform:scale(1.05);background-color:#4ade80;color:white}100%{transform:scale(1);background-color:#4ade80;color:white}}
-    .quiz-correct{animation:quizCorrect .5s ease forwards;border-color:#16a34a!important}
-    .quiz-wrong{background-color:#fee2e2!important;color:#ef4444!important;border-color:#fca5a5!important;opacity:.55;pointer-events:none;text-decoration:line-through}
+    @keyframes quizCorrect{0%{transform:scale(1)}50%{transform:scale(1.05);background-color:#a5b68d;color:white}100%{transform:scale(1);background-color:#a5b68d;color:white}}
+    .quiz-correct{animation:quizCorrect .5s ease forwards;border-color:#8fa375!important}
+    .quiz-wrong{background-color:#f5ebeb!important;color:#d97a7a!important;border-color:#eababa!important;opacity:.65;pointer-events:none;text-decoration:line-through}
     @keyframes floatUp{0%{opacity:1;transform:translate(-50%,-50%) scale(.5)}20%{opacity:1;transform:translate(-50%,-80%) scale(1.2)}100%{opacity:0;transform:translate(-50%,-150%) scale(1)}}
     .anim-float-up{animation:floatUp 1.2s cubic-bezier(.16,1,.3,1) forwards;pointer-events:none}
-    .wood-bg{background-color:#fef3c7;background-image:radial-gradient(#fde68a 2px,transparent 2px),radial-gradient(#fde68a 2px,transparent 2px);background-size:32px 32px;background-position:0 0,16px 16px}
+    
+    /* 奶油木質調背景點陣 */
+    .wood-bg{background-color:#faf8f5;background-image:radial-gradient(#eaddd7 2px,transparent 2px),radial-gradient(#eaddd7 2px,transparent 2px);background-size:32px 32px;background-position:0 0,16px 16px}
+    
     .perspective-1000{perspective:1000px}
     .transform-style-3d{transform-style:preserve-3d}
     .backface-hidden{backface-visibility:hidden}
     .rotate-y-180{transform:rotateY(180deg)}
-    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#d6caba;border-radius:3px}
     textarea{user-select:text}input[type=text]{user-select:text}
   </style>
 </head>
@@ -71,9 +74,9 @@ const SafeImage=({src,word})=>{
     if(cur!==fb){setCur(fb);setStatus('loading');}else setStatus('error');
   };
   return(
-    <div className="absolute inset-0 w-full h-full bg-amber-50 overflow-hidden rounded-xl border border-slate-200 shadow-inner">
-      <div className="absolute inset-0 flex items-center justify-center text-amber-300 z-0">{HelpCircle&&<HelpCircle size={56}/>}</div>
-      {status==='loading'&&<div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20"><div className="w-9 h-9 border-4 border-orange-300 border-t-orange-500 rounded-full animate-spin"/></div>}
+    <div className="absolute inset-0 w-full h-full bg-[#f5f0ea] overflow-hidden rounded-xl border border-[#e1d7cb] shadow-inner">
+      <div className="absolute inset-0 flex items-center justify-center text-[#d4c5b9] z-0">{HelpCircle&&<HelpCircle size={56}/>}</div>
+      {status==='loading'&&<div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20"><div className="w-9 h-9 border-4 border-[#e1d7cb] border-t-[#8c7a6b] rounded-full animate-spin"/></div>}
       {cur&&status!=='error'&&<img src={cur} alt={word} draggable="false" className={`w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-300 ${status==='loading'?'opacity-0':'opacity-100'}`} onLoad={()=>setStatus('ok')} onError={onError}/>}
     </div>
   );
@@ -90,7 +93,7 @@ const useSounds=(isMuted)=>{
       osc.connect(g).connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+dur);}catch{}
   },[isMuted]);
   return{
-    pop:    useCallback(()=>tone(600,'sine',.06),[tone]),
+    pop:  useCallback(()=>tone(600,'sine',.06),[tone]),
     drop:   useCallback(()=>tone(380,'triangle',.06),[tone]),
     success:useCallback(()=>{tone(523,'sine',.12);setTimeout(()=>tone(659,'sine',.15),100);setTimeout(()=>tone(784,'sine',.2),220);},[tone]),
     error:  useCallback(()=>tone(160,'sawtooth',.3,.09),[tone]),
@@ -491,21 +494,23 @@ const App=()=>{
 
   const fmt=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
   const firstEmptySpellingIdx=selectedLetters.findIndex(l=>l===null);
-  const modeBg={spelling:'bg-sky-500/10',quiz:'bg-green-500/10',listening:'bg-indigo-500/10',truefalse:'bg-rose-500/10',flashcard:'bg-purple-500/10'};
+  
+  // 淡雅色系背景
+  const modeBg={spelling:'bg-[#f2f5f8]',quiz:'bg-[#f4f7f2]',listening:'bg-[#f4f2f7]',truefalse:'bg-[#fcf5f5]',flashcard:'bg-[#f7f4fc]'};
 
   const ResultsList=()=>{
     if(!gameHistory.length)return null;
     return(
-      <div className="w-full mt-5 bg-white/60 p-4 rounded-2xl max-h-64 overflow-y-auto shadow-inner border border-slate-200/50 text-left">
-        <h4 className="font-black text-slate-700 mb-3 text-base flex items-center gap-2">📋 詳細成果</h4>
+      <div className="w-full mt-5 bg-[#faf8f5] p-4 rounded-2xl max-h-64 overflow-y-auto shadow-inner border border-[#eaddd7] text-left">
+        <h4 className="font-black text-[#5c4d43] mb-3 text-base flex items-center gap-2">📋 詳細成果</h4>
         <div className="flex flex-col gap-1.5">
           {gameHistory.map((item,idx)=>(
-            <div key={idx} className="flex justify-between items-center bg-white p-2.5 rounded-xl shadow-sm border border-slate-100">
-              <div className="flex flex-col"><span className="font-black text-slate-800">{item.word}</span>{item.translation&&<span className="text-xs font-bold text-slate-400">{item.translation}</span>}</div>
-              {gameMode==='flashcard'?<span className="text-blue-500 text-xs font-bold bg-blue-50 px-2 py-1 rounded-full">已複習</span>
-               :item.status==='failed'?<span className="text-red-500 text-xs font-bold bg-red-50 px-2 py-1 rounded-full">失敗</span>
-               :item.mistakes===0?<span className="text-green-500 text-xs font-bold bg-green-50 px-2 py-1 rounded-full">完美 ✓</span>
-               :<span className="text-orange-500 text-xs font-bold bg-orange-50 px-2 py-1 rounded-full">失誤 {item.mistakes}次</span>}
+            <div key={idx} className="flex justify-between items-center bg-white p-2.5 rounded-xl shadow-sm border border-[#e1d7cb]">
+              <div className="flex flex-col"><span className="font-black text-[#5c4d43]">{item.word}</span>{item.translation&&<span className="text-xs font-bold text-[#a19283]">{item.translation}</span>}</div>
+              {gameMode==='flashcard'?<span className="text-[#6d8a96] text-xs font-bold bg-[#edf3f5] px-2 py-1 rounded-full border border-[#d2e0e5]">已複習</span>
+               :item.status==='failed'?<span className="text-[#c76d6d] text-xs font-bold bg-[#fcf2f2] px-2 py-1 rounded-full border border-[#fad4d4]">失敗</span>
+               :item.mistakes===0?<span className="text-[#728f66] text-xs font-bold bg-[#f0f5ec] px-2 py-1 rounded-full border border-[#d3e5c8]">完美 ✓</span>
+               :<span className="text-[#b58b5e] text-xs font-bold bg-[#fcf8f2] px-2 py-1 rounded-full border border-[#f5e3cc]">失誤 {item.mistakes}次</span>}
             </div>
           ))}
         </div>
@@ -514,41 +519,47 @@ const App=()=>{
   };
 
   return(
-    <div className={`min-h-screen wood-bg text-slate-800 font-sans overflow-x-hidden flex flex-col relative`}>
+    <div className={`min-h-screen wood-bg text-[#5c4d43] font-sans overflow-x-hidden flex flex-col relative`}>
       {toast&&(
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-[slideUp_0.3s_ease-out]">
-          <div className={`px-6 py-3 rounded-full shadow-xl font-bold text-white flex items-center gap-2 ${toast.type==='error'?'bg-red-500':'bg-slate-800'}`}>
+          <div className={`px-6 py-3 rounded-full shadow-md font-bold text-white flex items-center gap-2 ${toast.type==='error'?'bg-[#d97a7a]':'bg-[#8c7a6b]'}`}>
             {toast.type==='error'?(XCircle&&<XCircle size={18}/>):(CheckCircle&&<CheckCircle size={18}/>)} {toast.msg}
           </div>
         </div>
       )}
 
       {floatPts&&screen==='playing'&&(
-        <div key={floatPts.id} className="fixed top-1/2 left-1/2 z-[100] text-6xl font-black text-yellow-400 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] anim-float-up italic pointer-events-none">+{floatPts.val}</div>
+        <div key={floatPts.id} className="fixed top-1/2 left-1/2 z-[100] text-6xl font-black text-[#e0a96d] drop-shadow-[0_2px_4px_rgba(139,122,107,0.3)] anim-float-up italic pointer-events-none">+{floatPts.val}</div>
       )}
 
       {/* ── Header ── */}
-      <header className="bg-orange-600/90 backdrop-blur-md shadow-[0_4px_0_0_rgba(194,65,12,1)] sticky top-0 z-40 text-white">
+      <header className="bg-[#f2efe9]/95 backdrop-blur-md shadow-sm sticky top-0 z-40 text-[#5c4d43] border-b border-[#e1d7cb]">
         <div className="p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-center max-w-5xl mx-auto gap-3 flex-wrap">
-          <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2 drop-shadow-md tracking-wider cursor-pointer hover:scale-105 active:scale-95 transition-transform" onClick={()=>setScreen('home')}>
-            {ImageIcon&&<ImageIcon size={26} className="text-orange-200"/>} Spelling Adventure
+          <h1 className="text-xl sm:text-2xl font-black flex items-center gap-2 tracking-wider cursor-pointer hover:scale-105 active:scale-95 transition-transform" onClick={()=>setScreen('home')}>
+            {ImageIcon&&<ImageIcon size={26} className="text-[#a6b89f]"/>} 耶加 Spelling Adventure
           </h1>
           {screen==='playing'&&(
-            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end bg-orange-800/40 px-4 py-2.5 rounded-2xl border-b-4 border-orange-900/50 flex-wrap">
-              <div className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">{currentIndex+1}/{wordList.length}</div>
-              {gameMode!=='flashcard'&&<div className="text-sm font-bold font-mono text-orange-100 flex items-center gap-1">{Clock&&<Clock size={14}/>}{fmt(timeElapsed)}</div>}
-              {gameMode!=='flashcard'&&<div className="flex items-center gap-1 text-yellow-300 font-black text-lg">{Star&&<Star size={18} className="fill-current"/>} {score}</div>}
-              {gameMode!=='flashcard'&&<div className="flex gap-0.5">{[0,1,2].map(i=>Heart&&<Heart key={i} size={18} className={`transition-all ${i<lives?'fill-red-400 text-red-500':'fill-slate-800/40 text-slate-900/40 scale-75'}`}/>)}</div>}
-              <div className="flex gap-1.5 ml-1">
-                <button onClick={()=>setIsMuted(!isMuted)} className={`p-2.5 rounded-xl transition-all active:scale-95 ${isMuted?'bg-red-500 hover:bg-red-400 text-white':'bg-white/20 hover:bg-white/30 text-white'}`}>{isMuted?(VolumeX&&<VolumeX size={18}/>):(Volume2&&<Volume2 size={18}/>)}</button>
-                <button onClick={()=>setScreen('home')} className="bg-white/20 hover:bg-white/30 active:bg-white/10 active:scale-95 text-white p-2.5 rounded-xl transition-all">{Home&&<Home size={18}/>}</button>
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end bg-white/70 px-4 py-2.5 rounded-2xl border border-[#e1d7cb] flex-wrap shadow-sm">
+              <div className="text-sm font-bold bg-[#f5f0ea] px-3 py-1 rounded-full text-[#8c7a6b] border border-[#e1d7cb]">{currentIndex+1}/{wordList.length}</div>
+              {gameMode!=='flashcard'&&<div className="text-sm font-bold font-mono text-[#8c7a6b] flex items-center gap-1">{Clock&&<Clock size={14}/>}{fmt(timeElapsed)}</div>}
+              {gameMode!=='flashcard'&&<div className="flex items-center gap-1 text-[#d4a373] font-black text-lg">{Star&&<Star size={18} className="fill-current"/>} {score}</div>}
+              {gameMode!=='flashcard'&&<div className="flex gap-0.5">{[0,1,2].map(i=>Heart&&<Heart key={i} size={18} className={`transition-all ${i<lives?'fill-[#d97a7a] text-[#d97a7a]':'fill-[#e1d7cb] text-[#e1d7cb] scale-75'}`}/>)}</div>}
+              <div className="flex gap-2 ml-1">
+                <button onClick={()=>setIsMuted(!isMuted)} className={`flex items-center gap-1.5 p-2 px-3 rounded-xl shadow-sm border border-[#e1d7cb] transition-all active:scale-95 ${isMuted?'bg-[#f5ebeb] text-[#d97a7a] border-[#eababa]':'bg-white hover:bg-[#faf8f5] text-[#8c7a6b]'}`}>
+                  {isMuted?(VolumeX&&<VolumeX size={16}/>):(Volume2&&<Volume2 size={16}/>)}
+                  <span className="text-sm font-bold">{isMuted ? '靜音中' : '音效'}</span>
+                </button>
+                <button onClick={()=>setScreen('home')} className="flex items-center gap-1.5 bg-white hover:bg-[#faf8f5] text-[#8c7a6b] shadow-sm border border-[#e1d7cb] active:scale-95 p-2 px-3 rounded-xl transition-all">
+                  {Home&&<Home size={16}/>}
+                  <span className="text-sm font-bold">回首頁</span>
+                </button>
               </div>
             </div>
           )}
-          {screen==='admin'&&<div className="text-sm font-bold bg-orange-800/40 px-4 py-2 rounded-full flex items-center gap-2">{Lock&&<Lock size={14}/>}教師後台模式 <button className="underline text-orange-200 hover:text-white transition-colors" onClick={()=>setScreen('home')}>離開</button></div>}
-          {screen==='adminEditUnit'&&<div className="text-sm font-bold bg-orange-800/40 px-4 py-2 rounded-full flex items-center gap-2">{PenLine&&<PenLine size={14}/>}編輯單字庫 <button className="underline text-orange-200 hover:text-white transition-colors" onClick={()=>setScreen('admin')}>← 返回後台</button></div>}
+          {screen==='admin'&&<div className="text-sm font-bold bg-white/70 border border-[#e1d7cb] px-4 py-2 rounded-full flex items-center gap-2">{Lock&&<Lock size={14}/>}教師後台模式 <button className="underline text-[#8c7a6b] hover:text-[#5c4d43] transition-colors ml-2" onClick={()=>setScreen('home')}>離開</button></div>}
+          {screen==='adminEditUnit'&&<div className="text-sm font-bold bg-white/70 border border-[#e1d7cb] px-4 py-2 rounded-full flex items-center gap-2">{PenLine&&<PenLine size={14}/>}編輯單字庫 <button className="underline text-[#8c7a6b] hover:text-[#5c4d43] transition-colors ml-2" onClick={()=>setScreen('admin')}>← 返回後台</button></div>}
         </div>
-        {screen==='playing'&&<div className="w-full h-1.5 bg-orange-900/50"><div className="h-full bg-yellow-400 transition-all duration-500" style={{width:`${(currentIndex/wordList.length)*100}%`}}/></div>}
+        {screen==='playing'&&<div className="w-full h-1 bg-[#e1d7cb]"><div className="h-full bg-[#a6b89f] transition-all duration-500" style={{width:`${(currentIndex/wordList.length)*100}%`}}/></div>}
       </header>
 
       <main className="flex-1 max-w-5xl mx-auto p-4 w-full flex items-center justify-center min-h-[calc(100vh-72px)] relative z-10">
@@ -557,33 +568,33 @@ const App=()=>{
         {screen==='home'&&(
           <div className="w-full max-w-4xl mx-auto flex flex-col items-center py-8 anim-slide">
             <div className="text-center mb-10">
-              <div className="bg-orange-100 w-20 h-20 mx-auto rounded-3xl rotate-3 flex items-center justify-center mb-5 shadow-inner">
-                {GraduationCap&&<GraduationCap size={44} className="text-orange-500 -rotate-3"/>}
+              <div className="bg-white w-20 h-20 mx-auto rounded-3xl rotate-3 flex items-center justify-center mb-5 shadow-sm border border-[#e1d7cb]">
+                {GraduationCap&&<GraduationCap size={44} className="text-[#a6b89f] -rotate-3"/>}
               </div>
-              <h2 className="text-3xl font-black text-slate-800 mb-1">Spelling Adventure</h2>
-              <p className="text-slate-500 font-medium">選擇一個單字庫，開始學習！</p>
+              <h2 className="text-3xl font-black text-[#5c4d43] mb-1">耶加 Spelling Adventure</h2>
+              <p className="text-[#a19283] font-medium">系統化學習，選擇單字庫開始！</p>
             </div>
 
             {cloudUnits.length===0?(
-              <div className="bg-white/80 p-10 rounded-[2rem] text-center max-w-lg mb-10 shadow-sm border-2 border-white">
-                {Database&&<Database size={56} className="text-slate-300 mx-auto mb-4"/>}
-                <p className="text-xl font-black text-slate-600 mb-2">目前沒有任何單字庫</p>
-                <p className="text-slate-400 font-medium">請老師進入後台建立單字庫。</p>
+              <div className="bg-white p-10 rounded-[2rem] text-center max-w-lg mb-10 shadow-sm border border-[#e1d7cb]">
+                {Database&&<Database size={56} className="text-[#d4c5b9] mx-auto mb-4"/>}
+                <p className="text-xl font-black text-[#8c7a6b] mb-2">目前沒有任何單字庫</p>
+                <p className="text-[#a19283] font-medium">請老師進入後台建立單字庫。</p>
               </div>
             ):(
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 w-full px-2 mb-10">
                 {cloudUnits.map(u=>(
-                  <button key={u.id} onClick={()=>openUnit(u)} className="bg-white p-7 rounded-[2rem] border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_10px_0_0_#e2e8f0] hover:-translate-y-1 active:translate-y-1.5 active:shadow-none transition-all flex flex-col items-center text-center group">
-                    <div className="bg-orange-100 p-4 rounded-full mb-4 group-hover:bg-orange-500 group-hover:text-white transition-colors text-orange-600">{BookOpen&&<BookOpen size={40}/>}</div>
-                    <h3 className="text-xl font-black text-slate-800 mb-1 break-words w-full leading-snug">{u.name}</h3>
-                    <p className="text-slate-400 font-bold text-sm bg-slate-100 px-3 py-1 rounded-full mt-1">{u.words?.length||0} 個單字</p>
-                    <div className="mt-3 text-orange-500 font-bold text-sm flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">{ChevronRight&&<ChevronRight size={16}/>}開始遊戲</div>
+                  <button key={u.id} onClick={()=>openUnit(u)} className="bg-white p-7 rounded-[2rem] border border-[#e1d7cb] shadow-[0_4px_0_0_#e1d7cb] hover:shadow-[0_6px_0_0_#d4c5b9] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all flex flex-col items-center text-center group">
+                    <div className="bg-[#f5f0ea] p-4 rounded-full mb-4 group-hover:bg-[#8c7a6b] group-hover:text-white transition-colors text-[#8c7a6b]">{BookOpen&&<BookOpen size={40}/>}</div>
+                    <h3 className="text-xl font-black text-[#5c4d43] mb-1 break-words w-full leading-snug">{u.name}</h3>
+                    <p className="text-[#8c7a6b] font-bold text-sm bg-[#faf8f5] border border-[#e1d7cb] px-3 py-1 rounded-full mt-1">{u.words?.length||0} 個單字</p>
+                    <div className="mt-4 text-[#a6b89f] font-bold text-sm flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-[#f0f5ec] px-4 py-1.5 rounded-full">{ChevronRight&&<ChevronRight size={16}/>}開始學習</div>
                   </button>
                 ))}
               </div>
             )}
 
-            <button onClick={handleAdminLogin} className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-4 rounded-full font-bold flex items-center gap-2 shadow-[0_6px_0_0_#0f172a] hover:shadow-[0_10px_0_0_#0f172a] hover:-translate-y-1 active:translate-y-1.5 active:shadow-none transition-all border-2 border-slate-900">
+            <button onClick={handleAdminLogin} className="bg-[#8c7a6b] hover:bg-[#7a6a5e] text-white px-8 py-4 rounded-full font-bold flex items-center gap-2 shadow-[0_4px_0_0_#5c4d43] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#5c4d43] active:translate-y-1 active:shadow-none transition-all">
               {Settings&&<Settings size={20}/>} 進入教師後台
             </button>
           </div>
@@ -592,51 +603,48 @@ const App=()=>{
         {/* ════════════ ADMIN 後台 ════════════ */}
         {screen==='admin'&&(
           <div className="w-full max-w-4xl mx-auto flex flex-col items-center py-8 anim-slide">
-            <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-2 self-start px-2">
-              {Settings&&<Settings size={28} className="text-orange-500"/>} 後台管理系統
+            <h2 className="text-2xl font-black text-[#5c4d43] mb-8 flex items-center gap-2 self-start px-2">
+              {Settings&&<Settings size={28} className="text-[#8c7a6b]"/>} 教師系統後台
             </h2>
 
             {/* 新增單字庫 */}
-            <div className="w-full bg-white p-7 rounded-[2rem] shadow-md border-4 border-slate-200 mb-6">
-              <h3 className="text-xl font-black text-slate-800 mb-1 flex items-center gap-2">{Plus&&<Plus size={20} className="text-green-500"/>}新增單字庫</h3>
-              <p className="text-slate-400 text-sm mb-5">A 欄填英文單字，B 欄可填中文翻譯，上傳 .xlsx 檔案</p>
+            <div className="w-full bg-white p-7 rounded-[2rem] shadow-sm border border-[#e1d7cb] mb-6">
+              <h3 className="text-xl font-black text-[#5c4d43] mb-1 flex items-center gap-2">{Plus&&<Plus size={20} className="text-[#a6b89f]"/>}新增單字庫</h3>
+              <p className="text-[#a19283] text-sm mb-5">A 欄填英文單字，B 欄可填中文翻譯，上傳 .xlsx 檔案</p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <input type="text" placeholder="為這個單字庫命名（例：Unit 1 動物）" className="flex-1 p-4 rounded-2xl border-2 border-slate-300 font-bold focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 focus:outline-none transition-all text-base" value={newUnitName} onChange={e=>setNewUnitName(e.target.value)} style={{userSelect:'text'}}/>
-                <label className="bg-orange-500 hover:bg-orange-400 text-white px-7 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-[0_6px_0_0_#c2410c] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#c2410c] active:translate-y-1.5 active:shadow-none transition-all cursor-pointer min-w-[160px]">
-                  {Upload&&<Upload size={20}/>} 上傳 Excel
+                <input type="text" placeholder="單字庫命名（例：第一單元）" className="flex-1 p-4 rounded-2xl bg-[#faf8f5] border border-[#d4c5b9] font-bold focus:border-[#8c7a6b] focus:ring-2 focus:ring-[#8c7a6b]/20 focus:outline-none transition-all text-base text-[#5c4d43]" value={newUnitName} onChange={e=>setNewUnitName(e.target.value)} style={{userSelect:'text'}}/>
+                <label className="bg-[#a6b89f] hover:bg-[#95a88e] text-white px-7 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-[0_4px_0_0_#7a8f71] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#7a8f71] active:translate-y-1 active:shadow-none transition-all cursor-pointer min-w-[160px]">
+                  {Upload&&<Upload size={20}/>} 選擇 Excel 上傳
                   <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleAdminUpload}/>
                 </label>
               </div>
             </div>
 
             {/* 管理現有單字庫 */}
-            <div className="w-full bg-white p-7 rounded-[2rem] shadow-md border-4 border-slate-200">
-              <h3 className="text-xl font-black text-slate-800 mb-5 flex items-center gap-2">{Database&&<Database size={20} className="text-blue-500"/>}管理雲端單字庫</h3>
+            <div className="w-full bg-white p-7 rounded-[2rem] shadow-sm border border-[#e1d7cb]">
+              <h3 className="text-xl font-black text-[#5c4d43] mb-5 flex items-center gap-2">{Database&&<Database size={20} className="text-[#8c7a6b]"/>}管理雲端單字庫</h3>
               {cloudUnits.length===0?(
-                <div className="bg-slate-50 p-8 rounded-2xl border-2 border-dashed border-slate-300 text-center text-slate-400 font-bold">目前雲端沒有任何單字庫</div>
+                <div className="bg-[#faf8f5] p-8 rounded-2xl border border-dashed border-[#d4c5b9] text-center text-[#a19283] font-bold">目前雲端沒有任何資料</div>
               ):(
                 <div className="flex flex-col gap-3">
                   {cloudUnits.map((u,i)=>(
-                    <div key={u.id} className="flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl border-2 border-slate-200 transition-colors group">
+                    <div key={u.id} className="flex justify-between items-center p-4 bg-[#faf8f5] hover:bg-white rounded-2xl border border-[#e1d7cb] transition-colors group">
                       <div className="flex items-center gap-3">
-                        <div className="bg-slate-200 text-slate-500 font-black w-8 h-8 rounded-full flex items-center justify-center text-sm">{i+1}</div>
+                        <div className="bg-white border border-[#e1d7cb] text-[#8c7a6b] font-black w-10 h-10 rounded-xl flex items-center justify-center text-sm shadow-sm">{i+1}</div>
                         <div>
-                          <span className="font-black text-slate-800 block">{u.name}</span>
-                          <span className="text-xs font-bold text-slate-400">{u.words?.length||0} 個單字</span>
+                          <span className="font-black text-[#5c4d43] block">{u.name}</span>
+                          <span className="text-xs font-bold text-[#a19283] bg-white px-2 py-0.5 rounded border border-[#e1d7cb]">{u.words?.length||0} 個單字</span>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        {/* 預覽 */}
-                        <button onClick={()=>openUnit(u)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 active:scale-95 p-2.5 rounded-xl transition-all flex items-center gap-1 font-bold text-sm" title="預覽遊戲">
-                          {Eye&&<Eye size={18}/>}<span className="hidden sm:inline">預覽</span>
+                      <div className="flex gap-2 flex-wrap justify-end">
+                        <button onClick={()=>openUnit(u)} className="text-[#728f66] bg-[#f0f5ec] border border-[#d3e5c8] hover:bg-[#e4eddb] active:scale-95 p-2 px-3 rounded-xl transition-all flex items-center gap-1.5 font-bold text-sm">
+                          {Eye&&<Eye size={16}/>}<span>預覽遊戲</span>
                         </button>
-                        {/* 編輯 */}
-                        <button onClick={()=>openAdminEdit(u)} className="text-orange-600 bg-orange-50 hover:bg-orange-100 active:bg-orange-200 active:scale-95 p-2.5 rounded-xl transition-all flex items-center gap-1 font-bold text-sm" title="編輯單字庫">
-                          {PenLine&&<PenLine size={18}/>}<span className="hidden sm:inline">編輯</span>
+                        <button onClick={()=>openAdminEdit(u)} className="text-[#a88654] bg-[#fdf8f0] border border-[#e8d7be] hover:bg-[#f5e9d3] active:scale-95 p-2 px-3 rounded-xl transition-all flex items-center gap-1.5 font-bold text-sm">
+                          {PenLine&&<PenLine size={16}/>}<span>編輯單字</span>
                         </button>
-                        {/* 刪除 */}
-                        <button onClick={()=>deleteUnit(u)} className="text-red-600 bg-red-50 hover:bg-red-100 active:bg-red-200 active:scale-95 p-2.5 rounded-xl transition-all flex items-center gap-1 font-bold text-sm" title="刪除">
-                          {Trash2&&<Trash2 size={18}/>}<span className="hidden sm:inline">刪除</span>
+                        <button onClick={()=>deleteUnit(u)} className="text-[#c76d6d] bg-[#fcf2f2] border border-[#fad4d4] hover:bg-[#f5e1e1] active:scale-95 p-2 px-3 rounded-xl transition-all flex items-center gap-1.5 font-bold text-sm">
+                          {Trash2&&<Trash2 size={16}/>}<span>刪除</span>
                         </button>
                       </div>
                     </div>
@@ -650,33 +658,33 @@ const App=()=>{
         {/* ════════════ ADMIN EDIT UNIT ════════════ */}
         {screen==='adminEditUnit'&&adminUnit&&(
           <div className="w-full max-w-3xl mx-auto flex flex-col items-center py-8 anim-slide">
-            <div className="w-full bg-white p-7 rounded-[2rem] shadow-md border-4 border-slate-200 mb-5">
-              <h3 className="text-xl font-black text-slate-800 mb-1 flex items-center gap-2">{PenLine&&<PenLine size={20} className="text-orange-500"/>}編輯單字庫名稱</h3>
-              <input type="text" className="w-full mt-3 p-4 rounded-2xl border-2 border-slate-300 font-bold focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 focus:outline-none transition-all text-base" value={adminUnit.name}
+            <div className="w-full bg-white p-7 rounded-[2rem] shadow-sm border border-[#e1d7cb] mb-5">
+              <h3 className="text-xl font-black text-[#5c4d43] mb-1 flex items-center gap-2">{PenLine&&<PenLine size={20} className="text-[#8c7a6b]"/>}編輯單字庫名稱</h3>
+              <input type="text" className="w-full mt-3 p-4 rounded-2xl bg-[#faf8f5] border border-[#d4c5b9] font-bold focus:border-[#8c7a6b] focus:ring-2 focus:ring-[#8c7a6b]/20 focus:outline-none transition-all text-base text-[#5c4d43]" value={adminUnit.name}
                 onChange={e=>setAdminUnit({...adminUnit,name:e.target.value})} style={{userSelect:'text'}}/>
             </div>
 
-            <div className="w-full bg-white p-7 rounded-[2rem] shadow-md border-4 border-slate-200 mb-5">
-              <h3 className="text-xl font-black text-slate-800 mb-1 flex items-center gap-2">{Edit3&&<Edit3 size={20} className="text-blue-500"/>}編輯單字清單</h3>
-              <p className="text-slate-400 text-sm mb-4">每行一個單字。如要加翻譯，用 <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">Tab</code> 分隔：<code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs">elephant 大象</code></p>
+            <div className="w-full bg-white p-7 rounded-[2rem] shadow-sm border border-[#e1d7cb] mb-5">
+              <h3 className="text-xl font-black text-[#5c4d43] mb-1 flex items-center gap-2">{Edit3&&<Edit3 size={20} className="text-[#a6b89f]"/>}編輯單字清單</h3>
+              <p className="text-[#a19283] text-sm mb-4">每行一個單字。加翻譯請用 <code className="bg-[#f5f0ea] px-1.5 py-0.5 rounded text-xs">Tab</code> 分隔：<code className="bg-[#f5f0ea] px-1.5 py-0.5 rounded text-xs">elephant 大象</code></p>
               <textarea
-                className="w-full h-72 p-4 rounded-2xl border-2 border-slate-300 font-mono text-sm focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 focus:outline-none transition-all resize-none leading-relaxed"
+                className="w-full h-72 p-4 rounded-2xl bg-[#faf8f5] border border-[#d4c5b9] font-mono text-sm focus:border-[#8c7a6b] focus:ring-2 focus:ring-[#8c7a6b]/20 focus:outline-none transition-all resize-none leading-relaxed text-[#5c4d43]"
                 value={adminUnitDraft}
                 onChange={e=>setAdminUnitDraft(e.target.value)}
                 placeholder={"elephant\t大象\nrainbow\t彩虹\nvolcano\t火山\n..."}
                 style={{userSelect:'text'}}
               />
-              <div className="flex justify-between mt-2 text-xs text-slate-400 font-bold">
+              <div className="flex justify-between mt-3 text-sm text-[#8c7a6b] font-bold bg-[#f5f0ea] px-4 py-2 rounded-lg">
                 <span>每行一個單字，可加 Tab + 中文翻譯</span>
                 <span>{adminUnitDraft.split('\n').filter(l=>l.trim()).length} 個單字</span>
               </div>
             </div>
 
             <div className="flex gap-4 w-full">
-              <button onClick={()=>setScreen('admin')} className="flex-1 bg-white text-slate-800 border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#e2e8f0] active:translate-y-1.5 active:shadow-none transition-all py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-                取消
+              <button onClick={()=>setScreen('admin')} className="flex-1 bg-white text-[#8c7a6b] border border-[#e1d7cb] shadow-[0_4px_0_0_#e1d7cb] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#d4c5b9] active:translate-y-1 active:shadow-none transition-all py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
+                取消返回
               </button>
-              <button onClick={saveAdminEdit} className="flex-1 bg-orange-500 hover:bg-orange-400 text-white shadow-[0_6px_0_0_#c2410c] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#c2410c] active:translate-y-1.5 active:shadow-none transition-all py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
+              <button onClick={saveAdminEdit} className="flex-1 bg-[#8c7a6b] hover:bg-[#7a6a5e] text-white shadow-[0_4px_0_0_#5c4d43] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#5c4d43] active:translate-y-1 active:shadow-none transition-all py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
                 {Save&&<Save size={20}/>} 儲存至雲端
               </button>
             </div>
@@ -686,28 +694,28 @@ const App=()=>{
         {/* ════════════ SELECT MODE ════════════ */}
         {screen==='selectMode'&&(
           <div className="w-full max-w-5xl flex flex-col items-center anim-slide py-6">
-            <div className="bg-white/90 backdrop-blur-md py-3 px-8 rounded-full shadow-sm border-2 border-white mb-8 text-center">
-              <h2 className="text-xl font-black text-slate-800">{currentUnitName}</h2>
-              <p className="text-slate-500 font-medium text-sm mt-0.5">共 {wordList.length} 個單字，選擇玩法開始！</p>
+            <div className="bg-white/90 backdrop-blur-md py-4 px-8 rounded-full shadow-sm border border-[#e1d7cb] mb-8 text-center">
+              <h2 className="text-2xl font-black text-[#5c4d43]">{currentUnitName}</h2>
+              <p className="text-[#8c7a6b] font-medium text-sm mt-1 bg-[#f5f0ea] inline-block px-3 py-1 rounded-full border border-[#e1d7cb]">共 {wordList.length} 個單字，選擇一種玩法</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full px-2">
               {[
-                {mode:'spelling',label:'拼字挑戰',icon:Type,color:'sky',desc:'打散字母積木，動動手指把單字拼回來！'},
-                {mode:'quiz',label:'看圖選字',icon:MousePointerClick,color:'green',desc:'經典選擇題，考驗你對單字與圖片的反應速度！'},
-                {mode:'listening',label:'聽力特訓',icon:Ear,color:'indigo',desc:'隱藏圖片，專注聆聽發音，選出正確單字！'},
-                {mode:'truefalse',label:'是非大考驗',icon:CheckSquare,color:'rose',desc:'圖片和單字配對正確嗎？'},
-                {mode:'flashcard',label:'單字閃卡',icon:BookOpen,color:'purple',desc:'3D 翻轉閃卡，純粹複習無壓力。'},
-              ].map(({mode,label,icon:Icon,color,desc})=>(
-                <button key={mode} onClick={()=>startGame(mode)} className={`bg-white p-6 sm:p-7 rounded-[2rem] border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:shadow-[0_10px_0_0_#e2e8f0] hover:-translate-y-1 active:translate-y-1.5 active:shadow-none transition-all flex flex-col items-center group ${mode==='flashcard'||mode==='truefalse'?'sm:col-span-2 lg:col-span-1':''}`}>
-                  <div className={`p-4 rounded-full mb-4 transition-colors bg-${color}-100 text-${color}-600 group-hover:bg-${color}-500 group-hover:text-white`}>{Icon&&<Icon size={36}/>}</div>
-                  <h3 className="text-xl font-black text-slate-800 mb-1">{label}</h3>
-                  <p className="text-slate-400 text-sm text-center leading-snug">{desc}</p>
+                {mode:'spelling',label:'拼字挑戰',icon:Type,color:'#a6b89f',bg:'#f0f5ec',desc:'打散字母積木，動動手指把單字拼回來！'},
+                {mode:'quiz',label:'看圖選字',icon:MousePointerClick,color:'#8ea6b8',bg:'#eef3f7',desc:'經典選擇題，考驗你對單字與圖片的反應速度！'},
+                {mode:'listening',label:'聽力特訓',icon:Ear,color:'#b8a48e',bg:'#f7f2ed',desc:'隱藏圖片，專注聆聽發音，選出正確單字！'},
+                {mode:'truefalse',label:'是非大考驗',icon:CheckSquare,color:'#b88e9b',bg:'#f7edf0',desc:'圖片和單字配對正確嗎？'},
+                {mode:'flashcard',label:'單字閃卡',icon:BookOpen,color:'#a08eb8',bg:'#f2edf7',desc:'3D 翻轉閃卡，純粹複習無壓力。'},
+              ].map(({mode,label,icon:Icon,color,bg,desc})=>(
+                <button key={mode} onClick={()=>startGame(mode)} className={`bg-white p-6 sm:p-7 rounded-[2rem] border border-[#e1d7cb] shadow-[0_4px_0_0_#e1d7cb] hover:shadow-[0_6px_0_0_#d4c5b9] hover:-translate-y-1 active:translate-y-1 active:shadow-none transition-all flex flex-col items-center group ${mode==='flashcard'||mode==='truefalse'?'sm:col-span-2 lg:col-span-1':''}`}>
+                  <div className="p-4 rounded-full mb-4 transition-colors text-white" style={{backgroundColor: color}}>{Icon&&<Icon size={36}/>}</div>
+                  <h3 className="text-xl font-black text-[#5c4d43] mb-2">{label}</h3>
+                  <p className="text-[#a19283] text-sm text-center leading-relaxed">{desc}</p>
                 </button>
               ))}
             </div>
             <div className="flex flex-col sm:flex-row gap-4 mt-8 w-full max-w-md px-2">
-              <button onClick={()=>setScreen('home')} className="flex-1 flex items-center justify-center gap-2 bg-white text-slate-700 border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#e2e8f0] active:translate-y-1 active:shadow-none transition-all px-5 py-3.5 rounded-full font-bold">{Home&&<Home size={18}/>}返回大廳</button>
-              <button onClick={()=>setScreen('editImages')} className="flex-1 flex items-center justify-center gap-2 bg-orange-100 hover:bg-orange-200 text-orange-700 shadow-[0_4px_0_0_#fdba74] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#fdba74] active:translate-y-1 active:shadow-none transition-all px-5 py-3.5 rounded-full font-bold">{ImagePlus&&<ImagePlus size={18}/>}自訂圖片</button>
+              <button onClick={()=>setScreen('home')} className="flex-1 flex items-center justify-center gap-2 bg-white text-[#8c7a6b] border border-[#e1d7cb] shadow-[0_4px_0_0_#e1d7cb] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#e1d7cb] active:translate-y-1 active:shadow-none transition-all px-5 py-4 rounded-2xl font-bold">{Home&&<Home size={18}/>}返回大廳</button>
+              <button onClick={()=>setScreen('editImages')} className="flex-1 flex items-center justify-center gap-2 bg-[#f5f0ea] text-[#8c7a6b] border border-[#d4c5b9] shadow-[0_4px_0_0_#d4c5b9] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#d4c5b9] active:translate-y-1 active:shadow-none transition-all px-5 py-4 rounded-2xl font-bold">{ImagePlus&&<ImagePlus size={18}/>}自訂圖片</button>
             </div>
           </div>
         )}
@@ -715,28 +723,28 @@ const App=()=>{
         {/* ════════════ EDIT IMAGES ════════════ */}
         {screen==='editImages'&&(
           <div className="w-full max-w-5xl flex flex-col items-center anim-slide py-4">
-            <div className="w-full flex justify-between items-center mb-5 bg-white/90 backdrop-blur-md p-4 px-6 rounded-2xl shadow-sm gap-4 flex-wrap border-2 border-slate-100">
+            <div className="w-full flex justify-between items-center mb-5 bg-white p-4 px-6 rounded-2xl shadow-sm gap-4 flex-wrap border border-[#e1d7cb]">
               <div>
-                <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">{ImagePlus&&<ImagePlus size={22} className="text-orange-500"/>}自訂題庫圖片</h2>
-                <p className="text-slate-500 text-sm">更換圖片後請按「儲存至雲端」</p>
+                <h2 className="text-xl font-black text-[#5c4d43] flex items-center gap-2">{ImagePlus&&<ImagePlus size={22} className="text-[#8c7a6b]"/>}自訂題庫圖片</h2>
+                <p className="text-[#a19283] text-sm mt-1">更換圖片後請按「儲存至雲端」</p>
               </div>
               <div className="flex gap-3">
-                <button onClick={()=>setScreen('selectMode')} className="bg-white text-slate-800 border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#e2e8f0] active:translate-y-1 active:shadow-none transition-all px-5 py-2.5 rounded-full font-bold">取消</button>
-                <button onClick={saveImages} className="bg-orange-500 text-white shadow-[0_4px_0_0_#c2410c] hover:bg-orange-400 hover:-translate-y-1 hover:shadow-[0_6px_0_0_#c2410c] active:translate-y-1 active:shadow-none transition-all px-6 py-2.5 rounded-full font-bold flex items-center gap-2">{Save&&<Save size={16}/>}儲存至雲端</button>
+                <button onClick={()=>setScreen('selectMode')} className="bg-white text-[#8c7a6b] border border-[#e1d7cb] shadow-sm hover:bg-[#faf8f5] active:scale-95 transition-all px-5 py-2.5 rounded-xl font-bold">取消編輯</button>
+                <button onClick={saveImages} className="bg-[#8c7a6b] text-white shadow-sm hover:bg-[#7a6a5e] active:scale-95 transition-all px-6 py-2.5 rounded-xl font-bold flex items-center gap-2">{Save&&<Save size={16}/>}儲存至雲端</button>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
               {wordList.slice(editPage*20,(editPage+1)*20).map((item,i)=>{
                 const ai=editPage*20+i;
                 return(
-                  <div key={ai} className="bg-white p-3 rounded-2xl shadow-sm border-2 border-slate-100 flex flex-col items-center hover:border-orange-300 transition-colors">
-                    <div className="w-full aspect-square bg-slate-50 rounded-xl mb-2 relative overflow-hidden border border-slate-200">
-                      {item.hasFetched?<SafeImage src={item.image} word={item.word}/>:<div className="absolute inset-0 flex items-center justify-center"><div className="w-7 h-7 border-4 border-orange-300 border-t-orange-500 rounded-full animate-spin"/></div>}
+                  <div key={ai} className="bg-white p-4 rounded-2xl shadow-sm border border-[#e1d7cb] flex flex-col items-center hover:border-[#bdafa2] transition-colors">
+                    <div className="w-full aspect-square bg-[#faf8f5] rounded-xl mb-3 relative overflow-hidden border border-[#e1d7cb]">
+                      {item.hasFetched?<SafeImage src={item.image} word={item.word}/>:<div className="absolute inset-0 flex items-center justify-center"><div className="w-7 h-7 border-4 border-[#e1d7cb] border-t-[#8c7a6b] rounded-full animate-spin"/></div>}
                     </div>
-                    <h3 className="font-black text-slate-800 text-sm truncate w-full text-center lowercase">{item.word}</h3>
-                    {item.translation&&<p className="text-xs text-slate-400 font-bold truncate w-full text-center mb-1">{item.translation}</p>}
-                    <label className="cursor-pointer mt-auto w-full bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 py-2 rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-1 active:scale-95">
-                      {Upload&&<Upload size={12}/>}更換圖片
+                    <h3 className="font-black text-[#5c4d43] text-sm truncate w-full text-center lowercase mb-1">{item.word}</h3>
+                    {item.translation&&<p className="text-xs text-[#a19283] font-bold bg-[#f5f0ea] px-2 py-0.5 rounded-full truncate max-w-full text-center mb-2">{item.translation}</p>}
+                    <label className="cursor-pointer mt-auto w-full bg-white hover:bg-[#faf8f5] text-[#8c7a6b] border border-[#e1d7cb] py-2.5 rounded-xl text-sm font-bold text-center transition-colors flex items-center justify-center gap-2 active:scale-95">
+                      {Upload&&<Upload size={16}/>}更換圖片
                       <input type="file" accept="image/*" className="hidden" onChange={e=>handleCustomImage(ai,e)}/>
                     </label>
                   </div>
@@ -744,10 +752,10 @@ const App=()=>{
               })}
             </div>
             {wordList.length>20&&(
-              <div className="flex gap-3 items-center mt-5 bg-white/90 px-6 py-3 rounded-full shadow-sm font-bold text-slate-700 border-2 border-white">
-                <button onClick={()=>setEditPage(p=>Math.max(0,p-1))} disabled={editPage===0} className="p-2 hover:bg-slate-100 rounded-full disabled:opacity-30 disabled:hover:bg-transparent">{ArrowLeft&&<ArrowLeft size={20}/>}</button>
+              <div className="flex gap-3 items-center mt-6 bg-white px-6 py-3 rounded-full shadow-sm font-bold text-[#8c7a6b] border border-[#e1d7cb]">
+                <button onClick={()=>setEditPage(p=>Math.max(0,p-1))} disabled={editPage===0} className="p-2 hover:bg-[#f5f0ea] rounded-full disabled:opacity-30 disabled:hover:bg-transparent">{ArrowLeft&&<ArrowLeft size={20}/>}</button>
                 <span className="text-sm">第 {editPage+1} / {Math.ceil(wordList.length/20)} 頁</span>
-                <button onClick={()=>setEditPage(p=>Math.min(Math.ceil(wordList.length/20)-1,p+1))} disabled={editPage===Math.ceil(wordList.length/20)-1} className="p-2 hover:bg-slate-100 rounded-full disabled:opacity-30 disabled:hover:bg-transparent">{ArrowRight&&<ArrowRight size={20}/>}</button>
+                <button onClick={()=>setEditPage(p=>Math.min(Math.ceil(wordList.length/20)-1,p+1))} disabled={editPage===Math.ceil(wordList.length/20)-1} className="p-2 hover:bg-[#f5f0ea] rounded-full disabled:opacity-30 disabled:hover:bg-transparent">{ArrowRight&&<ArrowRight size={20}/>}</button>
               </div>
             )}
           </div>
@@ -760,24 +768,32 @@ const App=()=>{
             {/* 閃卡 */}
             {gameMode==='flashcard'&&(
               <div className="flex flex-col items-center w-full anim-slide">
-                <div className="bg-purple-500/10 p-6 sm:p-10 rounded-[3rem] border-8 border-white/50 shadow-2xl w-full backdrop-blur-sm">
+                <div className="bg-white p-6 sm:p-10 rounded-[3rem] border border-[#e1d7cb] shadow-md w-full">
                   <div className="w-full max-w-sm aspect-[4/3] perspective-1000 mx-auto cursor-pointer group" onClick={handleFlip}>
-                    <div className={`relative w-full h-full transition-transform duration-500 transform-style-3d shadow-[0_8px_20px_-3px_rgba(0,0,0,0.2)] rounded-3xl ${isFlipped?'rotate-y-180':''}`}>
-                      <div className="absolute inset-0 backface-hidden bg-white rounded-3xl border-8 border-white overflow-hidden flex items-center justify-center">
-                        {!currentLevel.hasFetched?<div className="w-10 h-10 border-4 border-orange-300 border-t-orange-500 rounded-full animate-spin"/>:<SafeImage key={`f-${currentIndex}`} src={currentLevel.image} word={currentLevel.word}/>}
-                        <div className="absolute bottom-3 right-3 bg-slate-900/60 text-white px-3 py-1.5 rounded-full font-bold text-xs flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">{RefreshCcw&&<RefreshCcw size={13}/>}點擊翻轉</div>
+                    <div className={`relative w-full h-full transition-transform duration-500 transform-style-3d shadow-[0_4px_12px_rgba(0,0,0,0.05)] rounded-3xl ${isFlipped?'rotate-y-180':''}`}>
+                      <div className="absolute inset-0 backface-hidden bg-white rounded-3xl border-[6px] border-[#f5f0ea] overflow-hidden flex items-center justify-center">
+                        {!currentLevel.hasFetched?<div className="w-10 h-10 border-4 border-[#e1d7cb] border-t-[#8c7a6b] rounded-full animate-spin"/>:<SafeImage key={`f-${currentIndex}`} src={currentLevel.image} word={currentLevel.word}/>}
+                        <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur text-[#8c7a6b] border border-[#e1d7cb] px-4 py-2 rounded-full font-bold text-sm flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">{RefreshCcw&&<RefreshCcw size={16}/>}點擊翻面</div>
                       </div>
-                      <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-sky-400 to-blue-600 rounded-3xl border-8 border-white flex flex-col items-center justify-center rotate-y-180 p-6 text-white">
-                        <h2 className="text-4xl sm:text-5xl font-black mb-3 tracking-wider lowercase text-center">{currentLevel.word}</h2>
-                        {currentLevel.translation&&<p className="text-xl font-bold bg-white/20 px-5 py-1.5 rounded-full shadow-inner">{currentLevel.translation}</p>}
-                        <button onClick={e=>{e.stopPropagation();snd.speak(currentLevel.word);}} className="mt-6 bg-white text-blue-600 p-4 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-transform">{isMuted?(VolumeX&&<VolumeX size={26}/>):(Volume2&&<Volume2 size={26}/>)}</button>
+                      <div className="absolute inset-0 backface-hidden bg-[#faf8f5] rounded-3xl border-[6px] border-[#eaddd7] flex flex-col items-center justify-center rotate-y-180 p-6 text-[#5c4d43]">
+                        <h2 className="text-4xl sm:text-5xl font-black mb-4 tracking-wider lowercase text-center">{currentLevel.word}</h2>
+                        {currentLevel.translation&&<p className="text-xl font-bold bg-white px-6 py-2 rounded-full shadow-sm border border-[#e1d7cb] text-[#8c7a6b]">{currentLevel.translation}</p>}
+                        <button onClick={e=>{e.stopPropagation();snd.speak(currentLevel.word);}} className="mt-8 bg-white border border-[#e1d7cb] text-[#8c7a6b] p-4 rounded-full shadow-sm hover:bg-[#f5f0ea] active:scale-95 transition-all flex items-center gap-2 font-bold px-6">
+                          {isMuted?(VolumeX&&<VolumeX size={20}/>):(Volume2&&<Volume2 size={20}/>)} 發音
+                        </button>
                       </div>
                     </div>
                   </div>
                   <div className="flex w-full justify-between items-center mt-10 gap-3">
-                    <button onClick={prevFlashcard} disabled={currentIndex===0} className="flex-1 bg-white text-slate-800 border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#e2e8f0] active:translate-y-1.5 active:shadow-none transition-all py-4 rounded-2xl flex items-center justify-center gap-1 font-bold disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_6px_0_0_#e2e8f0] disabled:active:translate-y-0">{ArrowLeft&&<ArrowLeft size={18}/>}上一張</button>
-                    <button onClick={shuffleFlashcards} className="bg-purple-100 text-purple-600 border-2 border-purple-200 shadow-[0_6px_0_0_#d8b4fe] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#d8b4fe] active:translate-y-1.5 active:shadow-none transition-all p-4 rounded-2xl flex items-center justify-center">{Shuffle&&<Shuffle size={22}/>}</button>
-                    <button onClick={nextFlashcard} className="flex-1 bg-purple-500 hover:bg-purple-400 text-white shadow-[0_6px_0_0_#7e22ce] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#7e22ce] active:translate-y-1.5 active:shadow-none transition-all py-4 rounded-2xl flex items-center justify-center gap-1 font-bold">{currentIndex+1===wordList.length?'完成':'下一張'}{ArrowRight&&<ArrowRight size={18}/>}</button>
+                    <button onClick={prevFlashcard} disabled={currentIndex===0} className="flex-1 bg-white text-[#8c7a6b] border border-[#e1d7cb] shadow-[0_4px_0_0_#e1d7cb] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#e1d7cb] active:translate-y-1 active:shadow-none transition-all py-4 rounded-2xl flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_#e1d7cb] disabled:active:translate-y-0">
+                      {ArrowLeft&&<ArrowLeft size={18}/>}上一張
+                    </button>
+                    <button onClick={shuffleFlashcards} className="bg-[#f5f0ea] text-[#8c7a6b] border border-[#e1d7cb] shadow-[0_4px_0_0_#e1d7cb] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#e1d7cb] active:translate-y-1 active:shadow-none transition-all p-4 px-6 rounded-2xl flex items-center justify-center gap-2 font-bold">
+                      {Shuffle&&<Shuffle size={20}/>}洗牌
+                    </button>
+                    <button onClick={nextFlashcard} className="flex-1 bg-[#8c7a6b] hover:bg-[#7a6a5e] text-white shadow-[0_4px_0_0_#5c4d43] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#5c4d43] active:translate-y-1 active:shadow-none transition-all py-4 rounded-2xl flex items-center justify-center gap-2 font-bold">
+                      {currentIndex+1===wordList.length?'完成':'下一張'}{ArrowRight&&<ArrowRight size={18}/>}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -785,41 +801,40 @@ const App=()=>{
 
             {/* 遊戲模式（非閃卡）*/}
             {gameMode!=='flashcard'&&(
-              <div className={`p-4 sm:p-8 rounded-[3rem] border-8 border-white/50 shadow-2xl w-full backdrop-blur-sm flex flex-col items-center relative anim-slide ${modeBg[gameMode]||'bg-sky-500/10'}`}>
-                <div className="relative bg-white p-3 pb-10 sm:pb-14 rounded-xl shadow-[0_8px_20px_-3px_rgba(0,0,0,0.2)] w-full max-w-[280px] sm:max-w-xs mb-8 transform -rotate-1 hover:rotate-0 transition-transform duration-300 group">
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-red-500 rounded-full shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3),2px_4px_4px_rgba(0,0,0,0.3)] border border-red-700 z-30 flex items-center justify-center"><div className="w-3 h-3 bg-red-300 rounded-full opacity-60"/></div>
-                  <div className="bg-white rounded-xl overflow-hidden aspect-square relative border border-slate-100">
+              <div className={`p-5 sm:p-8 rounded-[3rem] border border-[#e1d7cb] shadow-sm w-full flex flex-col items-center relative anim-slide ${modeBg[gameMode]||'bg-white'}`}>
+                <div className="relative bg-white p-3 pb-10 sm:pb-14 rounded-2xl shadow-sm border border-[#e1d7cb] w-full max-w-[280px] sm:max-w-xs mb-8">
+                  <div className="bg-[#faf8f5] rounded-xl overflow-hidden aspect-square relative border border-[#e1d7cb]">
                     {gameMode==='listening'?(
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-indigo-500 text-white cursor-pointer hover:bg-indigo-400 transition-colors z-20" onClick={()=>snd.speak(currentLevel.word)}>
-                        {Ear&&<Ear size={64} className="mb-3 animate-pulse"/>}<span className="font-bold text-lg">點擊聆聽</span>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#f5f0ea] text-[#8c7a6b] cursor-pointer hover:bg-[#efe8df] transition-colors z-20" onClick={()=>snd.speak(currentLevel.word)}>
+                        {Ear&&<Ear size={56} className="mb-4 animate-pulse"/>}<span className="font-bold text-lg bg-white px-4 py-1.5 rounded-full border border-[#e1d7cb]">點擊聆聽</span>
                       </div>
                     ):!currentLevel.hasFetched?(
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-100 z-20"><div className="w-9 h-9 border-4 border-orange-300 border-t-orange-500 rounded-full animate-spin"/></div>
+                      <div className="absolute inset-0 flex items-center justify-center z-20"><div className="w-9 h-9 border-4 border-[#e1d7cb] border-t-[#8c7a6b] rounded-full animate-spin"/></div>
                     ):(
                       <SafeImage key={`g-${currentIndex}`} src={currentLevel.image} word={currentLevel.word}/>
                     )}
                   </div>
                   <div className="absolute bottom-3 right-3 flex gap-2 z-30">
-                    {gameMode==='spelling'&&<button onClick={giveHint} disabled={spellingOk} className="bg-yellow-400 hover:bg-yellow-300 text-yellow-900 p-3 rounded-full shadow-[0_4px_0_0_#a16207] active:shadow-none active:translate-y-1 transition-all disabled:opacity-50 disabled:active:translate-y-0 disabled:shadow-[0_4px_0_0_#a16207]" title="提示(-5分)">{Lightbulb&&<Lightbulb size={20}/>}</button>}
-                    {gameMode!=='listening'&&gameMode!=='truefalse'&&<button onClick={()=>snd.speak(currentLevel.word)} className="bg-blue-500 hover:bg-blue-400 text-white p-3 rounded-full shadow-[0_4px_0_0_#1e3a8a] active:shadow-none active:translate-y-1 transition-all">{isMuted?(VolumeX&&<VolumeX size={20}/>):(Volume2&&<Volume2 size={20}/>)}</button>}
+                    {gameMode==='spelling'&&<button onClick={giveHint} disabled={spellingOk} className="bg-white hover:bg-[#faf8f5] border border-[#e1d7cb] text-[#8c7a6b] px-4 py-2.5 rounded-xl shadow-sm active:shadow-none active:translate-y-1 transition-all disabled:opacity-50 flex items-center gap-1.5 font-bold text-sm" title="提示(-5分)">{Lightbulb&&<Lightbulb size={16}/>} 提示</button>}
+                    {gameMode!=='listening'&&gameMode!=='truefalse'&&<button onClick={()=>snd.speak(currentLevel.word)} className="bg-[#8c7a6b] hover:bg-[#7a6a5e] text-white px-4 py-2.5 rounded-xl shadow-sm active:shadow-none active:translate-y-1 transition-all flex items-center gap-1.5 font-bold text-sm">{isMuted?(VolumeX&&<VolumeX size={16}/>):(Volume2&&<Volume2 size={16}/>)} 發音</button>}
                   </div>
-                  {currentLevel.translation&&<div className="absolute bottom-3 left-3 bg-orange-100 text-orange-700 text-sm font-bold px-3 py-1.5 rounded-full max-w-[120px] truncate shadow-sm">{currentLevel.translation}</div>}
+                  {currentLevel.translation&&<div className="absolute bottom-3 left-3 bg-[#f5f0ea] text-[#8c7a6b] border border-[#e1d7cb] text-sm font-bold px-3 py-1.5 rounded-lg max-w-[120px] truncate shadow-sm">{currentLevel.translation}</div>}
                 </div>
 
                 {/* 拼字 */}
                 {gameMode==='spelling'&&(
                   <>
-                    <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 bg-slate-900/10 p-5 rounded-[2rem] shadow-inner w-full min-h-[6rem]">
+                    <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 bg-white border border-[#e1d7cb] p-5 rounded-[2rem] shadow-sm w-full min-h-[6rem]">
                       {currentLevel.word.split('').map((_,i)=>{
                         const isErr=wrongSlotIdxs.includes(i),filled=selectedLetters[i]!==null,isActive=!filled&&i===firstEmptySpellingIdx&&!spellingOk;
                         let cls='flex items-center justify-center text-3xl font-black rounded-xl transition-all duration-200 select-none ';
-                        if(!filled){cls+='bg-slate-800/20 border-2 border-dashed text-transparent ';cls+=isActive?'border-orange-400 shadow-[0_0_15px_rgba(251,146,60,0.6)] bg-orange-400/30 ':'border-slate-800/25 shadow-inner ';}
-                        else{cls+='bg-white text-slate-800 border-2 border-slate-300 shadow-[0_6px_0_0_#cbd5e1] ';if(isErr)cls+='bg-red-100 text-red-600 border-red-300 shadow-[0_6px_0_0_#f87171] anim-shake ';else if(spellingOk)cls+='anim-pop shadow-[0_6px_0_0_#16a34a] ';else cls+='cursor-pointer hover:-translate-y-1 active:translate-y-1.5 active:shadow-none ';}
+                        if(!filled){cls+='bg-[#faf8f5] border-2 border-dashed text-transparent ';cls+=isActive?'border-[#bdafa2] bg-white shadow-sm ':'border-[#e1d7cb] ';}
+                        else{cls+='bg-white text-[#5c4d43] border-2 border-[#d4c5b9] shadow-[0_4px_0_0_#d4c5b9] ';if(isErr)cls+='bg-[#fcf2f2] text-[#d97a7a] border-[#fad4d4] shadow-[0_4px_0_0_#eababa] anim-shake ';else if(spellingOk)cls+='anim-pop shadow-[0_4px_0_0_#8fa375] ';else cls+='cursor-pointer hover:-translate-y-1 active:translate-y-1 active:shadow-none ';}
                         return <div key={i} className={cls} style={{width:'50px',height:'60px'}} onClick={()=>filled&&!isErr&&!spellingOk&&unselectSlot(selectedLetters[i],i)}>{filled?selectedLetters[i].char.toLowerCase():''}</div>;
                       })}
                     </div>
                     <div className="flex flex-wrap justify-center gap-2 sm:gap-3 w-full min-h-[4rem]">
-                      {shuffledLetters.map(l=><button key={l.id} onClick={()=>clickTile(l)} disabled={spellingOk||isTransitioning} className="bg-gradient-to-b from-orange-400 to-orange-500 text-white border-2 border-orange-300 rounded-xl text-3xl font-black shadow-[0_6px_0_0_#c2410c] hover:brightness-110 hover:-translate-y-1 hover:shadow-[0_8px_0_0_#c2410c] active:translate-y-1.5 active:shadow-none transition-all flex items-center justify-center select-none disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_6px_0_0_#c2410c] disabled:active:translate-y-0" style={{width:'50px',height:'60px'}}>{l.char.toLowerCase()}</button>)}
+                      {shuffledLetters.map(l=><button key={l.id} onClick={()=>clickTile(l)} disabled={spellingOk||isTransitioning} className="bg-[#f5f0ea] text-[#5c4d43] border border-[#d4c5b9] rounded-xl text-3xl font-black shadow-[0_4px_0_0_#d4c5b9] hover:bg-white hover:-translate-y-1 hover:shadow-[0_6px_0_0_#d4c5b9] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center select-none disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_#d4c5b9] disabled:active:translate-y-0" style={{width:'50px',height:'60px'}}>{l.char.toLowerCase()}</button>)}
                     </div>
                   </>
                 )}
@@ -829,9 +844,9 @@ const App=()=>{
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                     {quizOptions.map((opt,i)=>{
                       const isCorrect=opt===quizCorrectOpt,isWrong=wrongQuizOpts.includes(opt);
-                      let cls='w-full py-5 px-6 bg-white text-slate-800 border-4 border-slate-200 rounded-2xl text-2xl font-black shadow-[0_6px_0_0_#e2e8f0] hover:-translate-y-1 hover:shadow-[0_10px_0_0_#e2e8f0] active:translate-y-1.5 active:shadow-none transition-all lowercase text-center flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_6px_0_0_#e2e8f0] disabled:active:translate-y-0 ';
-                      if(isCorrect)cls+='quiz-correct !shadow-[0_6px_0_0_#16a34a] ';else if(isWrong)cls+='quiz-wrong !shadow-[0_6px_0_0_#fca5a5] ';
-                      return <button key={i} disabled={isTransitioning||isWrong||!!quizCorrectOpt} onClick={()=>handleQuizSelect(opt)} className={cls}><span className="text-slate-400 text-base font-bold bg-slate-100 rounded-lg px-3 py-1 shrink-0">{i+1}</span>{opt}</button>;
+                      let cls='w-full py-5 px-6 bg-white text-[#5c4d43] border border-[#e1d7cb] rounded-2xl text-2xl font-black shadow-[0_4px_0_0_#e1d7cb] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#d4c5b9] active:translate-y-1 active:shadow-none transition-all lowercase text-center flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_0_0_#e1d7cb] disabled:active:translate-y-0 ';
+                      if(isCorrect)cls+='quiz-correct !shadow-[0_4px_0_0_#8fa375] ';else if(isWrong)cls+='quiz-wrong !shadow-[0_4px_0_0_#eababa] ';
+                      return <button key={i} disabled={isTransitioning||isWrong||!!quizCorrectOpt} onClick={()=>handleQuizSelect(opt)} className={cls}><span className="text-[#a19283] text-base font-bold bg-[#faf8f5] rounded-lg px-3 py-1 shrink-0 border border-[#e1d7cb]">{i+1}</span>{opt}</button>;
                     })}
                   </div>
                 )}
@@ -839,10 +854,10 @@ const App=()=>{
                 {/* 是非 */}
                 {gameMode==='truefalse'&&(
                   <div className="flex flex-col items-center w-full">
-                    <div className="bg-white px-10 py-5 rounded-3xl shadow-sm border-4 border-slate-200 mb-6 text-center w-full max-w-md"><h3 className="text-4xl sm:text-5xl font-black text-slate-800 lowercase tracking-wide">{tfWord}</h3></div>
+                    <div className="bg-white px-10 py-6 rounded-3xl shadow-sm border border-[#e1d7cb] mb-6 text-center w-full max-w-md"><h3 className="text-4xl sm:text-5xl font-black text-[#5c4d43] lowercase tracking-wide">{tfWord}</h3></div>
                     <div className="flex gap-4 w-full">
-                      <button onClick={()=>handleTFSelect(true)} disabled={isTransitioning} className="flex-1 bg-green-500 hover:bg-green-400 text-white py-6 rounded-[2rem] text-3xl font-black shadow-[0_8px_0_0_#15803d] hover:-translate-y-1 hover:shadow-[0_12px_0_0_#15803d] active:translate-y-2 active:shadow-none transition-all flex flex-col items-center gap-2 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_8px_0_0_#15803d] disabled:active:translate-y-0">{CheckCircle&&<CheckCircle size={52}/>}<span className="text-lg opacity-90 tracking-widest">正確</span></button>
-                      <button onClick={()=>handleTFSelect(false)} disabled={isTransitioning} className="flex-1 bg-red-500 hover:bg-red-400 text-white py-6 rounded-[2rem] text-3xl font-black shadow-[0_8px_0_0_#b91c1c] hover:-translate-y-1 hover:shadow-[0_12px_0_0_#b91c1c] active:translate-y-2 active:shadow-none transition-all flex flex-col items-center gap-2 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_8px_0_0_#b91c1c] disabled:active:translate-y-0">{XCircle&&<XCircle size={52}/>}<span className="text-lg opacity-90 tracking-widest">錯誤</span></button>
+                      <button onClick={()=>handleTFSelect(true)} disabled={isTransitioning} className="flex-1 bg-[#a5b68d] hover:bg-[#96a87e] text-white py-6 rounded-[2rem] text-2xl font-black shadow-[0_6px_0_0_#7a8c63] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#7a8c63] active:translate-y-1 active:shadow-none transition-all flex flex-col items-center gap-2 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_6px_0_0_#7a8c63] disabled:active:translate-y-0">{CheckCircle&&<CheckCircle size={44}/>}<span className="text-lg opacity-90 tracking-widest">正確 (O)</span></button>
+                      <button onClick={()=>handleTFSelect(false)} disabled={isTransitioning} className="flex-1 bg-[#d97a7a] hover:bg-[#c96b6b] text-white py-6 rounded-[2rem] text-2xl font-black shadow-[0_6px_0_0_#a85757] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#a85757] active:translate-y-1 active:shadow-none transition-all flex flex-col items-center gap-2 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-[0_6px_0_0_#a85757] disabled:active:translate-y-0">{XCircle&&<XCircle size={44}/>}<span className="text-lg opacity-90 tracking-widest">錯誤 (X)</span></button>
                     </div>
                   </div>
                 )}
@@ -853,13 +868,13 @@ const App=()=>{
 
         {/* ════════════ GAME OVER ════════════ */}
         {screen==='gameover'&&(
-          <div className="bg-slate-900/90 backdrop-blur-md p-8 sm:p-12 rounded-[3rem] shadow-2xl text-center border-4 border-slate-700 w-full max-w-lg text-white anim-slide">
-            <div className="text-red-500 flex justify-center mb-5">{XCircle&&<XCircle size={90} className="drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]"/>}</div>
-            <h2 className="text-4xl font-black mb-3 text-red-400 tracking-widest">GAME OVER</h2>
-            <p className="text-slate-300 mb-8 font-medium text-lg">愛心用盡！本次獲得 <span className="text-yellow-400 font-bold text-2xl">{score}</span> 分</p>
+          <div className="bg-white p-8 sm:p-12 rounded-[3rem] shadow-md border border-[#e1d7cb] text-center w-full max-w-lg anim-slide">
+            <div className="text-[#d97a7a] flex justify-center mb-5">{XCircle&&<XCircle size={90} className="drop-shadow-sm"/>}</div>
+            <h2 className="text-4xl font-black mb-3 text-[#5c4d43] tracking-widest">GAME OVER</h2>
+            <p className="text-[#8c7a6b] mb-8 font-medium text-lg bg-[#faf8f5] py-2 rounded-xl border border-[#e1d7cb]">愛心用盡！本次獲得 <span className="text-[#a88654] font-black text-xl mx-1">{score}</span> 分</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button onClick={()=>setScreen('home')} className="flex-1 bg-white text-slate-900 font-black py-4 px-7 rounded-full flex items-center justify-center gap-2 shadow-[0_6px_0_0_#cbd5e1] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#cbd5e1] active:translate-y-1.5 active:shadow-none transition-all">{Home&&<Home size={20}/>}回大廳</button>
-              <button onClick={()=>setScreen('selectMode')} className="flex-1 bg-sky-500 hover:bg-sky-400 text-white font-black py-4 px-7 rounded-full flex items-center justify-center gap-2 shadow-[0_6px_0_0_#0369a1] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#0369a1] active:translate-y-1.5 active:shadow-none transition-all">{RefreshCcw&&<RefreshCcw size={20}/>}重新挑戰</button>
+              <button onClick={()=>setScreen('home')} className="flex-1 bg-white text-[#8c7a6b] border border-[#e1d7cb] font-black py-4 px-7 rounded-2xl flex items-center justify-center gap-2 shadow-[0_4px_0_0_#e1d7cb] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#d4c5b9] active:translate-y-1 active:shadow-none transition-all">{Home&&<Home size={20}/>}回大廳</button>
+              <button onClick={()=>setScreen('selectMode')} className="flex-1 bg-[#8c7a6b] hover:bg-[#7a6a5e] text-white font-black py-4 px-7 rounded-2xl flex items-center justify-center gap-2 shadow-[0_4px_0_0_#5c4d43] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#5c4d43] active:translate-y-1 active:shadow-none transition-all">{RefreshCcw&&<RefreshCcw size={20}/>}重新挑戰</button>
             </div>
             <ResultsList/>
           </div>
@@ -867,19 +882,19 @@ const App=()=>{
 
         {/* ════════════ FINISHED ════════════ */}
         {screen==='finished'&&(
-          <div className="bg-white/95 backdrop-blur-sm p-8 sm:p-12 rounded-[3rem] shadow-2xl text-center border-8 border-yellow-400 w-full max-w-lg anim-slide">
-            <div className="relative mb-6"><div className="absolute inset-0 bg-yellow-300 blur-3xl opacity-40 rounded-full"/>{Trophy&&<Trophy size={110} className="text-yellow-500 mx-auto relative z-10 drop-shadow-md"/>}</div>
-            <h2 className="text-4xl font-black mb-6 text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-yellow-500 tracking-wider">大功告成！</h2>
+          <div className="bg-white p-8 sm:p-12 rounded-[3rem] shadow-md text-center border-[4px] border-[#d4c5b9] w-full max-w-lg anim-slide">
+            <div className="relative mb-6">{Trophy&&<Trophy size={100} className="text-[#cda28e] mx-auto relative z-10 drop-shadow-sm"/>}</div>
+            <h2 className="text-4xl font-black mb-6 text-[#5c4d43] tracking-wider">大功告成！</h2>
             {gameMode!=='flashcard'&&(
-              <div className="bg-slate-50 rounded-2xl p-6 mb-6 text-left space-y-4 shadow-inner border border-slate-200">
-                {[[Star&&<Star className="text-yellow-500 fill-yellow-500" size={20}/>,'總得分',score,'text-orange-600'],[Clock&&<Clock className="text-sky-500" size={20}/>,'花費時間',fmt(timeElapsed),'text-sky-600'],[Heart&&<Heart className="text-red-500 fill-red-500" size={20}/>,'剩餘愛心',`×${lives}`,'text-red-600']].map(([icon,label,val,cls],i)=>(
-                  <div key={i} className={`flex justify-between items-center font-bold text-slate-700 ${i>0?'border-t border-slate-200 pt-4':''}`}><span className="flex items-center gap-2 text-base">{icon}{label}</span><span className={`text-xl ${cls}`}>{val}</span></div>
+              <div className="bg-[#faf8f5] rounded-2xl p-6 mb-6 text-left space-y-4 border border-[#e1d7cb]">
+                {[[Star&&<Star className="text-[#cda28e] fill-[#cda28e]" size={20}/>,'總得分',score,'text-[#a88654]'],[Clock&&<Clock className="text-[#8ea6b8]" size={20}/>,'花費時間',fmt(timeElapsed),'text-[#6d8a96]'],[Heart&&<Heart className="text-[#d97a7a] fill-[#d97a7a]" size={20}/>,'剩餘愛心',`×${lives}`,'text-[#c76d6d]']].map(([icon,label,val,cls],i)=>(
+                  <div key={i} className={`flex justify-between items-center font-bold text-[#8c7a6b] ${i>0?'border-t border-[#e1d7cb] pt-4':''}`}><span className="flex items-center gap-2 text-base">{icon}{label}</span><span className={`text-xl ${cls}`}>{val}</span></div>
                 ))}
               </div>
             )}
             <div className="flex flex-col sm:flex-row gap-4">
-              <button onClick={()=>setScreen('home')} className="flex-1 bg-white text-slate-700 font-black py-4 rounded-full border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#e2e8f0] active:translate-y-1.5 active:shadow-none transition-all flex items-center justify-center gap-2">{Home&&<Home size={20}/>}大廳</button>
-              <button onClick={()=>setScreen('selectMode')} className="flex-1 bg-sky-500 hover:bg-sky-400 text-white font-black py-4 rounded-full shadow-[0_6px_0_0_#0369a1] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#0369a1] active:translate-y-1.5 active:shadow-none transition-all flex items-center justify-center gap-2">{RefreshCcw&&<RefreshCcw size={20}/>}換玩法</button>
+              <button onClick={()=>setScreen('home')} className="flex-1 bg-white text-[#8c7a6b] font-black py-4 rounded-2xl border border-[#e1d7cb] shadow-[0_4px_0_0_#e1d7cb] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#d4c5b9] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2">{Home&&<Home size={20}/>}首頁大廳</button>
+              <button onClick={()=>setScreen('selectMode')} className="flex-1 bg-[#8c7a6b] hover:bg-[#7a6a5e] text-white font-black py-4 rounded-2xl shadow-[0_4px_0_0_#5c4d43] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#5c4d43] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2">{RefreshCcw&&<RefreshCcw size={20}/>}切換玩法</button>
             </div>
             <ResultsList/>
           </div>
