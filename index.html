@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WordPop | 雲端單字學習平台</title>
+  <title>WordPop | 耶加專業單字學習平台</title>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -88,7 +88,7 @@
     .btn3d{transition:transform .1s ease,box-shadow .1s ease;cursor:pointer;border:none;outline:none}
     .btn3d:hover:not(:disabled){transform:translateY(-3px)}
     .btn3d:active:not(:disabled){transform:translateY(4px);box-shadow:none!important}
-    .btn3d:disabled{opacity:.45;cursor:not-allowed}
+    .btn3d:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none!important}
 
     /* ── Letter tiles ── */
     .tile{
@@ -146,20 +146,60 @@ let app,auth,db;
 try{app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);}
 catch(e){console.error(e);}
 
+/* ──────────────────────────── Image Processor ──────────────────────────── */
+// 這個引擎負責將大圖抓下來，並使用 Canvas 壓縮成極小的 Base64 格式，確保資料庫不會爆滿
+const generateAndCompressImage = (word) => new Promise((resolve, reject) => {
+    const stylePrompt = "3d isometric icon, clay style, cute, pastel colors, white background, high quality educational illustration, no text";
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(word + ', ' + stylePrompt)}?width=400&height=400&nologo=true`;
+    
+    const img = new Image();
+    img.crossOrigin = 'Anonymous'; // 解決跨域問題
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 300; 
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff'; // 填白底
+        ctx.fillRect(0, 0, 300, 300);
+        ctx.drawImage(img, 0, 0, 300, 300);
+        // 壓縮成 JPEG，品質 0.6，這樣一張圖大概只有 10~20KB，存入 Firebase 毫無負擔
+        resolve(canvas.toDataURL('image/jpeg', 0.6)); 
+    };
+    img.onerror = () => reject(new Error('Image load failed'));
+    img.src = url;
+});
+
 /* ──────────────────────────── SafeImage ──────────────────────────── */
 const SafeImage=({src,word})=>{
   const[st,setSt]=useState('loading');
-  const[cur,setCur]=useState(src);
-  useEffect(()=>{setSt('loading');setCur(src);},[src]);
-  const err=()=>{
-    const fb=`https://picsum.photos/seed/${encodeURIComponent(word)}/400/400`;
-    if(cur!==fb){setCur(fb);setSt('loading');}else setSt('error');
-  };
+  
+  useEffect(()=>{
+    if(src){
+      setSt('loading');
+      const img = new Image();
+      img.src = src;
+      img.onload = () => setSt('ok');
+      img.onerror = () => setSt('error');
+    }else{
+      setSt('error');
+    }
+  },[src]);
+
   return(
     <div className="absolute inset-0 overflow-hidden" style={{background:'#fef9c3'}}>
       <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-20">🖼️</div>
       {st==='loading'&&<div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20"><div style={{width:36,height:36,border:'4px solid #fcd34d',borderTopColor:'#f97316',borderRadius:'50%',animation:'spin 1s linear infinite'}}/></div>}
-      {cur&&st!=='error'&&<img src={cur} alt={word} draggable="false" className="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-300" style={{opacity:st==='loading'?0:1}} onLoad={()=>setSt('ok')} onError={err}/>}
+      
+      {st!=='error' && (
+        <img src={src} alt={word} draggable="false" className="w-full h-full object-cover absolute inset-0 z-10 transition-opacity duration-150" style={{opacity:st==='loading'?0:1}}/>
+      )}
+      
+      {st==='error' && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-100 z-30 flex-col text-slate-400">
+            <span className="text-2xl mb-1">📭</span>
+            <span className="font-bold text-xs">No Image</span>
+        </div>
+      )}
     </div>
   );
 };
@@ -224,17 +264,22 @@ const App=()=>{
   const[transitioning,setTransitioning]=useState(false);
   const[confetti,setConfetti]=useState([]);
   const[brokenHeart,setBrokenHeart]=useState(false);
+  const[isAutoGenerating,setIsAutoGenerating]=useState(false); // 新增：自動生成狀態
 
   const snd=useSounds(muted);
   const S=useRef({});
   S.current={screen,gameMode,wordList,currentIndex,combo,lives,transitioning,
-              spellingOk,wrongSlots,selected,shuffled,history,qErr};
+             spellingOk,wrongSlots,selected,shuffled,history,qErr};
   const fetchedRef=useRef(new Set());
   const playingRef=useRef(false);
   const timerRef=useRef(null);
   const cur=wordList[currentIndex];
 
-  const toast_=useCallback((msg,type='info')=>{setToast({msg,type});setTimeout(()=>setToast(null),3200);},[]);
+  // 優化版的 Toast，允許長時間停留
+  const toast_=useCallback((msg,type='info', duration=3200)=>{
+      setToast({msg,type});
+      if(duration > 0) setTimeout(()=>setToast(null), duration);
+  },[]);
 
   /* ── Firebase ── */
   useEffect(()=>{
@@ -252,28 +297,39 @@ const App=()=>{
     },err=>{setFbStatus('error');setFbError(err.message);});
   },[user]);
 
-  /* ── Image fetch ── */
-  const fetchImg=useCallback(async(idx,word)=>{
-    if(fetchedRef.current.has(idx)||!word)return;
-    fetchedRef.current.add(idx);
-    let url=null;
-    try{
-      const r=await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(word)}`);
-      if(r.ok){const d=await r.json();url=d.originalimage?.source||d.thumbnail?.source||null;if(url)url=url.replace('http://','https://');}
-    }catch{}
-    if(!url)url=`https://picsum.photos/seed/${encodeURIComponent(word)}/400/400`;
-    setWordList(prev=>{const n=[...prev];if(n[idx])n[idx]={...n[idx],image:url,hasFetched:true};return n;});
-  },[]);
-  useEffect(()=>{
-    if(!wordList.length)return;
-    [currentIndex,currentIndex+1,currentIndex+2].filter(i=>i<wordList.length)
-      .forEach(i=>{if(!wordList[i]?.hasFetched)fetchImg(i,wordList[i].word);});
-  },[currentIndex,wordList,fetchImg]);
-  useEffect(()=>{
-    if(screen!=='editImages')return;
-    const s=editPage*20,e=Math.min(s+20,wordList.length);
-    for(let i=s;i<e;i++){if(!wordList[i]?.hasFetched)fetchImg(i,wordList[i].word);}
-  },[editPage,screen,wordList,fetchImg]);
+  /* ── Auto AI Generator (The Magic) ── */
+  const runAutoGeneration = async () => {
+      if(!db || !currentUnitId) return;
+      setIsAutoGenerating(true);
+      const updatedList = [...wordList];
+      let generatedCount = 0;
+
+      toast_(`🤖 正在為未設定圖片的單字生成 AI 插圖... 請勿關閉網頁！`, 'info', 0);
+
+      for (let i = 0; i < updatedList.length; i++) {
+          // 只針對沒有圖片，或是舊的 wiki 連結進行生成
+          if (!updatedList[i].image || updatedList[i].image.startsWith('http')) {
+              try {
+                  const base64Img = await generateAndCompressImage(updatedList[i].word);
+                  updatedList[i].image = base64Img;
+                  generatedCount++;
+                  // 邊生成邊更新畫面，讓使用者有反饋
+                  setWordList([...updatedList]);
+              } catch(e) {
+                  console.log(`Failed to generate for ${updatedList[i].word}`);
+              }
+          }
+      }
+
+      // 全部生成完畢後，自動存入 Firebase
+      try {
+          await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'units', currentUnitId), { words: updatedList });
+          toast_(`✅ 生成完畢！共補齊 ${generatedCount} 張單字圖並已儲存至雲端。`, 'info');
+      } catch (e) {
+          toast_('❌ 雲端儲存失敗，請檢查網路連線。', 'error');
+      }
+      setIsAutoGenerating(false);
+  };
 
   /* ── Timers ── */
   useEffect(()=>{playingRef.current=screen==='playing';},[screen]);
@@ -480,8 +536,9 @@ const App=()=>{
 
   const openUnit=useCallback((unit)=>{
     setCurrentUnitId(unit.id);setCurrentUnitName(unit.name);
-    const list=unit.words.map(w=>({...w,hasFetched:!!w.image}));
-    setWordList(list);fetchedRef.current.clear();setEditPage(0);setScreen('selectMode');
+    // 直接載入圖片資料，無須另外 fetch
+    setWordList(unit.words || []);
+    setEditPage(0);setScreen('selectMode');
   },[]);
 
   /* ── Keyboard ── */
@@ -537,7 +594,7 @@ const App=()=>{
         const wb=Lib.read(evt.target.result,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];
         const data=Lib.utils.sheet_to_json(ws,{header:1});
         const words=data.filter(r=>r&&typeof r[0]==='string'&&r[0].trim())
-          .map(r=>({word:r[0].trim().toLowerCase(),translation:r[1]?String(r[1]).trim():'',image:null,hasFetched:false}))
+          .map(r=>({word:r[0].trim().toLowerCase(),translation:r[1]?String(r[1]).trim():'',image:null})) 
           .filter(item=>/^[a-zA-Z\s\-'']+$/.test(item.word));
         if(!words.length){toast_('❌ No valid words found!','error');return;}
         const uid='unit_'+Date.now();
@@ -558,7 +615,7 @@ const App=()=>{
   const saveAdminEdit=useCallback(async()=>{
     if(!adminUnit||!db)return;
     const words=adminDraft.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
-      const p=line.split(/\t/);return{word:p[0].trim().toLowerCase(),translation:(p[1]||'').trim(),image:null,hasFetched:false};
+      const p=line.split(/\t/);return{word:p[0].trim().toLowerCase(),translation:(p[1]||'').trim(),image:null}; 
     }).filter(item=>/^[a-zA-Z\s\-'']+$/.test(item.word));
     if(!words.length){toast_('❌ No valid words','error');return;}
     try{
@@ -581,9 +638,34 @@ const App=()=>{
 
   const handleCustomImage=useCallback((idx,e)=>{
     const file=e.target.files[0];if(!file)return;
+    // 將自訂圖片也一併壓縮處理
     const reader=new FileReader();
-    reader.onload=(evt)=>{setWordList(prev=>{const n=[...prev];n[idx]={...n[idx],image:evt.target.result,hasFetched:true};return n;});snd.success();toast_('🖼️ Image replaced! Remember to save.','info');};
-    reader.readAsDataURL(file);e.target.value='';
+    reader.onload=(evt)=>{
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 300; canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 300, 300);
+            
+            // 等比例縮放置中
+            const scale = Math.min(300 / img.width, 300 / img.height);
+            const x = (300 / 2) - (img.width / 2) * scale;
+            const y = (300 / 2) - (img.height / 2) * scale;
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            
+            setWordList(prev=>{
+                const n=[...prev];
+                n[idx]={...n[idx],image:canvas.toDataURL('image/jpeg', 0.6)}; 
+                return n;
+            });
+            snd.success();
+            toast_('🖼️ Image ready! Remember to save to cloud.','info');
+        };
+        img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value='';
   },[snd,toast_]);
 
   /* ── Helpers ── */
@@ -621,7 +703,7 @@ const App=()=>{
 
       {/* Toast */}
       {toast&&(
-        <div className="fixed top-4 left-1/2 z-[200] pointer-events-none" style={{transform:'translateX(-50%)',animation:'toastIn .3s ease-out'}}>
+        <div className="fixed top-4 left-1/2 z-[200]" style={{transform:'translateX(-50%)',animation:'toastIn .3s ease-out'}}>
           <div className="px-6 py-3 rounded-2xl font-extrabold text-white text-sm flex items-center gap-2" style={{background:toast.type==='error'?'#f43f5e':'#0d7a5f',boxShadow:toast.type==='error'?'0 5px 0 #be123c':'0 5px 0 #065f46'}}>
             {toast.msg}
           </div>
@@ -689,20 +771,8 @@ const App=()=>{
 
             {/* Firebase status */}
             {fbStatus==='loading'&&<div style={{background:'white',border:`2px solid ${TEAL}`,borderRadius:16,padding:'12px 24px',marginBottom:20,fontWeight:800,color:TEAL,fontSize:14,display:'flex',alignItems:'center',gap:8}}>⏳ Connecting to cloud…</div>}
-            {fbStatus==='error'&&(
-              <div style={{background:'#fff1f2',border:'2px solid #fda4af',borderRadius:20,padding:20,marginBottom:20,maxWidth:520,width:'100%'}}>
-                <p style={{fontWeight:900,color:'#f43f5e',marginBottom:8,fontSize:14}}>⚠️ Cloud connection failed</p>
-                <p style={{color:'#f43f5e',fontSize:12,fontWeight:700,marginBottom:10}}>{fbError}</p>
-                <div style={{background:'#fee2e2',borderRadius:12,padding:12,fontFamily:'monospace',fontSize:11,color:'#991b1b',lineHeight:1.8}}>
-                  <b>Set Firestore rules:</b><br/>
-                  {"rules_version = '2';"}<br/>
-                  {"service cloud.firestore {"}<br/>
-                  {"  match /databases/{database}/documents {"}<br/>
-                  {"    match /artifacts/{appId}/public/{document=**} {"}<br/>
-                  {"      allow read, write: if request.auth != null;"}<br/>
-                  {"    }  }  }"}
-                </div>
-              </div>
+            {fbError && fbStatus==='error' && (
+                <div className="p-4 bg-red-100 border border-red-300 text-red-700 rounded-xl text-sm font-bold mb-6">⚠️ Firebase Error: {fbError}. Please check your configuration.</div>
             )}
 
             {/* Unit cards */}
@@ -710,7 +780,7 @@ const App=()=>{
               <div style={{background:'white',border:`3px solid ${TEAL}`,borderRadius:24,padding:40,textAlign:'center',maxWidth:400,marginBottom:24,boxShadow:`0 6px 0 ${TEAL}`}}>
                 <div style={{fontSize:56,marginBottom:12}}>📭</div>
                 <p style={{fontWeight:900,color:TEAL_D,fontSize:18,marginBottom:4}}>No word sets yet!</p>
-                <p style={{color:'#9ca3af',fontWeight:700,fontSize:14}}>Ask your teacher to add some. / 請老師新增單字庫</p>
+                <p style={{color:'#9ca3af',fontWeight:700,fontSize:14}}>Ask your teacher to add some.</p>
               </div>
             )}
             {cloudUnits.length>0&&(
@@ -720,7 +790,7 @@ const App=()=>{
                     {bg:'#ecfdf5',border:TEAL,shadow:TEAL_D,icon:'#d1fae5',emoji:'📗'},
                     {bg:'#fffbeb',border:'#d97706',shadow:'#b45309',icon:'#fef3c7',emoji:'📙'},
                     {bg:'#eff6ff',border:'#2563eb',shadow:'#1d4ed8',icon:'#dbeafe',emoji:'📘'},
-                    {bg:'#fdf4ff',border:'#9333ea',shadow:'#7e22ce',icon:'#f3e8ff',emoji:'📓'},
+                    {bg:'#fdf4ff',border:'#9333ea',shadow:'#7e22ce',icon:'#e9d5ff',emoji:'📓'},
                     {bg:'#fff1f2',border:'#e11d48',shadow:'#be123c',icon:'#ffe4e6',emoji:'📕'},
                   ][i%5];
                   return(
@@ -751,11 +821,9 @@ const App=()=>{
             {/* Upload */}
             <div style={{width:'100%',background:'white',border:`3px solid ${TEAL}`,borderRadius:24,padding:28,marginBottom:20,boxShadow:`0 6px 0 ${TEAL}`}}>
               <p style={{fontWeight:900,color:TEAL_D,fontSize:17,marginBottom:4}}>➕ Add New Word Set</p>
-              <p style={{color:'#9ca3af',fontWeight:700,fontSize:13,marginBottom:16}}>Excel: Column A = English word, Column B = Translation (optional)</p>
               <div style={{display:'flex',flexDirection:'column',gap:12}}>
                 <input type="text" placeholder="Unit name (e.g. Unit 1 – Animals)" value={newUnitName} onChange={e=>setNewUnitName(e.target.value)}
-                  style={{flex:1,padding:'14px 18px',borderRadius:16,border:`2px solid #d1d5db`,fontWeight:800,fontSize:15,outline:'none',fontFamily:'Nunito',transition:'border-color .2s'}}
-                  onFocus={e=>e.target.style.borderColor=TEAL} onBlur={e=>e.target.style.borderColor='#d1d5db'}/>
+                  style={{flex:1,padding:'14px 18px',borderRadius:16,border:`2px solid #d1d5db`,fontWeight:800,fontSize:15,outline:'none',fontFamily:'Nunito'}}/>
                 <label className="btn3d" style={{background:CORAL,color:'white',borderRadius:16,padding:'14px 24px',fontWeight:900,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:`0 6px 0 ${CORAL_D}`,cursor:'pointer'}}>
                   📤 Upload Excel
                   <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={adminUpload}/>
@@ -773,22 +841,15 @@ const App=()=>{
                   {cloudUnits.map((u,i)=>(
                     <div key={u.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#f9fafb',borderRadius:16,padding:'14px 18px',border:'2px solid #f3f4f6'}}>
                       <div style={{display:'flex',alignItems:'center',gap:12}}>
-                        <div style={{width:36,height:36,borderRadius:50,background:TEAL,color:'white',fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>{i+1}</div>
+                        <div style={{width:36,height:36,borderRadius:50,background:TEAL,color:'white',fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center'}}>{i+1}</div>
                         <div>
-                          <p style={{fontWeight:900,color:'#1f2937',marginBottom:2}}>{u.name}</p>
-                          <span style={{background:'#d1fae5',color:TEAL_D,borderRadius:50,padding:'2px 10px',fontWeight:800,fontSize:12}}>{u.words?.length||0} words</span>
+                          <p style={{fontWeight:900,color:'#1f2937'}}>{u.name}</p>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">{u.words?.length||0} words</span>
                         </div>
                       </div>
                       <div style={{display:'flex',gap:8}}>
-                        {[
-                          {label:'👁️ Preview',bg:'#0d7a5f',shadow:'#065f46',action:()=>openUnit(u)},
-                          {label:'✏️ Edit',bg:'#d97706',shadow:'#b45309',action:()=>openAdminEdit(u)},
-                          {label:'🗑️ Delete',bg:'#f43f5e',shadow:'#be123c',action:()=>deleteUnit(u)},
-                        ].map(b=>(
-                          <button key={b.label} onClick={b.action} className="btn3d" style={{background:b.bg,color:'white',border:'none',borderRadius:12,padding:'8px 14px',fontWeight:800,fontSize:13,boxShadow:`0 4px 0 ${b.shadow}`}}>
-                            {b.label}
-                          </button>
-                        ))}
+                          <button onClick={()=>openUnit(u)} className="btn3d text-xs bg-slate-600 text-white px-3 py-1.5 rounded-lg font-bold shadow-[0_3px_0_#334155]">Preview</button>
+                          <button onClick={()=>deleteUnit(u)} className="btn3d text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg font-bold shadow-[0_3px_0_#991b1b]">Delete</button>
                       </div>
                     </div>
                   ))}
@@ -798,230 +859,135 @@ const App=()=>{
           </div>
         )}
 
-        {/* ═══ ADMIN EDIT ═══ */}
-        {screen==='adminEditUnit'&&adminUnit&&(
-          <div className="w-full max-w-3xl flex flex-col items-center py-8 anim-slide">
-            {[
-              {label:'✏️ Unit Name / 單字庫名稱',content:<input type="text" value={adminUnit.name} onChange={e=>setAdminUnit({...adminUnit,name:e.target.value})} style={{width:'100%',marginTop:12,padding:'14px 18px',borderRadius:16,border:`2px solid #d1d5db`,fontWeight:800,fontSize:15,outline:'none',fontFamily:'Nunito',transition:'border-color .2s'}} onFocus={e=>e.target.style.borderColor=TEAL} onBlur={e=>e.target.style.borderColor='#d1d5db'}/>},
-              {label:'📝 Word List / 單字清單',hint:'One word per line. Tab to add translation: elephant [Tab] 大象',
-               content:<><textarea value={adminDraft} onChange={e=>setAdminDraft(e.target.value)}
-                 style={{width:'100%',height:280,marginTop:12,padding:16,borderRadius:16,border:`2px solid #d1d5db`,fontFamily:'monospace',fontSize:13,outline:'none',resize:'none',lineHeight:1.8,transition:'border-color .2s'}}
-                 onFocus={e=>e.target.style.borderColor=TEAL} onBlur={e=>e.target.style.borderColor='#d1d5db'}
-                 placeholder={"elephant\t大象\nrainbow\t彩虹\nvolcano\t火山"}/>
-               <p style={{textAlign:'right',color:'#9ca3af',fontWeight:700,fontSize:12,marginTop:6}}>{adminDraft.split('\n').filter(l=>l.trim()).length} words</p></>},
-            ].map((sec,i)=>(
-              <div key={i} style={{width:'100%',background:'white',border:`3px solid ${TEAL}`,borderRadius:24,padding:24,marginBottom:16,boxShadow:`0 6px 0 ${TEAL}`}}>
-                <p style={{fontWeight:900,color:TEAL_D,fontSize:16}}>{sec.label}</p>
-                {sec.hint&&<p style={{color:'#9ca3af',fontWeight:700,fontSize:12,marginTop:4}}>{sec.hint}</p>}
-                {sec.content}
-              </div>
-            ))}
-            <div style={{display:'flex',gap:14,width:'100%'}}>
-              <button onClick={()=>setScreen('admin')} className="btn3d" style={{flex:1,background:'white',color:'#374151',border:`3px solid #e5e7eb`,borderRadius:16,padding:'14px',fontWeight:900,fontSize:15,boxShadow:'0 5px 0 #e5e7eb'}}>✕ Cancel</button>
-              <button onClick={saveAdminEdit} className="btn3d" style={{flex:2,background:TEAL,color:'white',border:'none',borderRadius:16,padding:'14px',fontWeight:900,fontSize:15,boxShadow:`0 5px 0 ${TEAL_D}`}}>💾 Save to Cloud / 儲存至雲端</button>
-            </div>
-          </div>
-        )}
-
         {/* ═══ SELECT MODE ═══ */}
         {screen==='selectMode'&&(
           <div className="w-full max-w-5xl flex flex-col items-center anim-slide py-6">
-            <div style={{textAlign:'center',marginBottom:36}}>
-              <div style={{background:'white',border:`3px solid ${TEAL}`,borderRadius:20,display:'inline-block',padding:'12px 32px',boxShadow:`0 5px 0 ${TEAL}`}}>
-                <p style={{fontFamily:"'Fredoka One',cursive",fontSize:22,color:TEAL_D,margin:0}}>{currentUnitName}</p>
-                <p style={{color:'#9ca3af',fontWeight:700,fontSize:13,margin:'4px 0 0'}}>{wordList.length} words · Choose your game mode!</p>
-              </div>
-            </div>
-
+            <p className="font-extrabold text-teal-800 mb-6 bg-white px-6 py-2 rounded-full border border-teal-200 shadow-sm">{currentUnitName}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full px-2">
               {[
-                {mode:'spelling',  emoji:'🔤', en:'Spelling',     zh:'拼字挑戰', desc:'Arrange tiles to spell the word!',    bg:'#ecfdf5',border:TEAL,    shadow:TEAL_D,    icon:'#a7f3d0'},
-                {mode:'quiz',      emoji:'🖼️', en:'Picture Quiz', zh:'看圖選字', desc:'Look at the picture and pick the right word!', bg:'#fffbeb',border:'#d97706',shadow:'#b45309',icon:'#fde68a'},
-                {mode:'listening', emoji:'👂', en:'Listening',    zh:'聽力特訓', desc:'Listen carefully, then choose!',     bg:'#eff6ff',border:'#2563eb',shadow:'#1d4ed8',icon:'#bfdbfe'},
-                {mode:'truefalse', emoji:'🤔', en:'True / False', zh:'是非大考驗',desc:'Does the word match the image?',     bg:'#fff7ed',border:CORAL,    shadow:CORAL_D,   icon:'#fed7aa'},
-                {mode:'flashcard', emoji:'🃏', en:'Flashcards',   zh:'單字閃卡', desc:'Flip cards to review at your pace.',  bg:'#fdf4ff',border:'#9333ea',shadow:'#7e22ce',icon:'#e9d5ff'},
-              ].map(({mode,emoji,en,zh,desc,bg,border,shadow,icon},idx)=>(
+                {mode:'spelling',  emoji:'🔤', en:'Spelling',desc:'Arrange tiles to spell the word!',    bg:'#ecfdf5',border:TEAL,    shadow:TEAL_D},
+                {mode:'quiz',      emoji:'🖼️', en:'Picture Quiz',desc:'Look at the picture and pick the right word!', bg:'#fffbeb',border:'#d97706',shadow:'#b45309'},
+                {mode:'listening', emoji:'👂', en:'Listening',desc:'Listen carefully, then choose!',     bg:'#eff6ff',border:'#2563eb',shadow:'#1d4ed8'},
+                {mode:'flashcard', emoji:'🃏', en:'Flashcards',desc:'Flip cards to review at your pace.',  bg:'#fdf4ff',border:'#9333ea',shadow:'#7e22ce'},
+              ].map(({mode,emoji,en,desc,bg,border,shadow},idx)=>(
                 <button key={mode} onClick={()=>startGame(mode)} className="card-lift"
-                  style={{background:bg,border:`3px solid ${border}`,borderRadius:24,boxShadow:`0 8px 0 ${shadow}`,padding:'28px 20px',display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center',cursor:'pointer',gridColumn:mode==='flashcard'||mode==='truefalse'?'span 1':'span 1'}}>
-                  <div style={{width:80,height:80,borderRadius:24,background:icon,display:'flex',alignItems:'center',justifyContent:'center',fontSize:42,marginBottom:14,boxShadow:`0 5px 0 ${shadow}`}}>
-                    {emoji}
-                  </div>
-                  <p style={{fontFamily:"'Fredoka One',cursive",fontSize:22,color:shadow,margin:'0 0 4px'}}>{en}</p>
-                  <p style={{fontWeight:800,fontSize:13,color:border,margin:'0 0 10px'}}>{zh}</p>
-                  <p style={{fontWeight:700,fontSize:13,color:'#6b7280',lineHeight:1.5}}>{desc}</p>
+                  style={{background:bg,border:`3px solid ${border}`,borderRadius:24,boxShadow:`0 8px 0 ${shadow}`,padding:'28px 20px',display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center'}}>
+                  <div style={{fontSize:48,marginBottom:10}}>{emoji}</div>
+                  <p style={{fontFamily:"'Fredoka One',cursive",fontSize:22,color:shadow}}>{en}</p>
+                  <p style={{fontWeight:700,fontSize:13,color:'#6b7280',marginTop:6,lineHeight:1.4}}>{desc}</p>
                 </button>
               ))}
             </div>
-
-            <div style={{display:'flex',gap:14,marginTop:28,width:'100%',maxWidth:400,padding:'0 8px'}}>
-              <button onClick={()=>setScreen('home')} className="btn3d" style={{flex:1,background:'white',color:TEAL_D,border:`3px solid ${TEAL}`,borderRadius:16,padding:'13px',fontWeight:900,fontSize:15,boxShadow:`0 5px 0 ${TEAL}`}}>🏠 Home</button>
-              <button onClick={()=>setScreen('editImages')} className="btn3d" style={{flex:1,background:'#fef3c7',color:'#92400e',border:'3px solid #fcd34d',borderRadius:16,padding:'13px',fontWeight:900,fontSize:15,boxShadow:'0 5px 0 #f59e0b'}}>🖼️ Customize</button>
+            <div style={{display:'flex',gap:10,marginTop:20}}>
+                <button onClick={()=>setScreen('home')} className="btn3d px-6 py-2 bg-white text-slate-700 rounded-xl font-bold border shadow-[0_4px_0_#e2e8f0]">Home</button>
+                <button onClick={()=>setScreen('editImages')} className="btn3d px-6 py-2 bg-amber-400 text-amber-950 rounded-xl font-bold shadow-[0_4px_0_#b45309]">🖼️ 圖片管理 (Customize)</button>
             </div>
           </div>
         )}
 
-        {/* ═══ EDIT IMAGES ═══ */}
+        {/* ═══ EDIT IMAGES (後台管理模式) ═══ */}
         {screen==='editImages'&&(
           <div className="w-full max-w-5xl flex flex-col items-center anim-slide py-4">
-            <div style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,background:'white',border:`2px solid ${TEAL}`,borderRadius:20,padding:'14px 24px',gap:16,flexWrap:'wrap',boxShadow:`0 4px 0 ${TEAL}`}}>
-              <div>
-                <p style={{fontWeight:900,color:TEAL_D,fontSize:16,margin:0}}>🖼️ Customize Images</p>
-                <p style={{color:'#9ca3af',fontWeight:700,fontSize:12,margin:'4px 0 0'}}>Replace any image, then save to cloud.</p>
-              </div>
-              <div style={{display:'flex',gap:10}}>
-                <button onClick={()=>setScreen('selectMode')} className="btn3d" style={{background:'white',color:'#374151',border:'2px solid #e5e7eb',borderRadius:12,padding:'9px 18px',fontWeight:800,fontSize:13,boxShadow:'0 4px 0 #e5e7eb'}}>✕ Cancel</button>
-                <button onClick={saveImages} className="btn3d" style={{background:TEAL,color:'white',border:'none',borderRadius:12,padding:'9px 18px',fontWeight:800,fontSize:13,boxShadow:`0 4px 0 ${TEAL_D}`}}>💾 Save to Cloud</button>
-              </div>
+            <div className="w-full flex justify-between items-center mb-4 bg-white p-4 rounded-xl border border-slate-200">
+                <h2 className="font-extrabold text-slate-800">🖼️ 單字圖片管理</h2>
+                <div style={{display:'flex',gap:8}}>
+                    <button onClick={()=>setScreen('selectMode')} disabled={isAutoGenerating} className="btn3d text-xs bg-slate-100 text-slate-700 px-3 py-2 rounded-lg font-bold border shadow-[0_3px_0_#e2e8f0]">返回 (Cancel)</button>
+                    {/* 一鍵 AI 自動生成與壓縮按鈕 */}
+                    <button onClick={runAutoGeneration} disabled={isAutoGenerating} className="btn3d text-xs bg-amber-400 text-amber-900 px-4 py-2 rounded-lg font-bold shadow-[0_3px_0_#b45309]">
+                        {isAutoGenerating ? '⏳ 生成中...' : '🤖 一鍵 AI 生成缺漏圖片'}
+                    </button>
+                    <button onClick={saveImages} disabled={isAutoGenerating} className="btn3d text-xs bg-teal-600 text-white px-4 py-2 rounded-lg font-bold shadow-[0_3px_0_#065f46]">💾 儲存至雲端 (Save)</button>
+                </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 w-full">
               {wordList.slice(editPage*20,(editPage+1)*20).map((item,i)=>{
                 const ai=editPage*20+i;
                 return(
-                  <div key={ai} style={{background:'white',borderRadius:18,border:'2px solid #e5e7eb',padding:12,display:'flex',flexDirection:'column',alignItems:'center'}}>
-                    <div style={{width:'100%',aspectRatio:'1',borderRadius:12,marginBottom:8,position:'relative',overflow:'hidden',background:'#f9fafb'}}>
-                      {item.hasFetched?<SafeImage src={item.image} word={item.word}/>:<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{width:28,height:28,border:'4px solid #fcd34d',borderTopColor:'#f97316',borderRadius:'50%',animation:'spin 1s linear infinite'}}/></div>}
+                  <div key={ai} style={{background:'white',borderRadius:18,border:'2px solid #e5e7eb',padding:10,display:'flex',flexDirection:'column',alignItems:'center'}}>
+                    <div style={{width:'100%',aspectRatio:'1',borderRadius:12,marginBottom:6,position:'relative',overflow:'hidden',background:'#f9fafb'}}>
+                      <SafeImage src={item.image} word={item.word}/>
                     </div>
-                    <p style={{fontWeight:900,color:'#1f2937',fontSize:13,textAlign:'center',marginBottom:2,textTransform:'lowercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',width:'100%'}}>{item.word}</p>
-                    {item.translation&&<p style={{color:'#9ca3af',fontSize:11,fontWeight:700,marginBottom:6,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',width:'100%',textAlign:'center'}}>{item.translation}</p>}
-                    <label style={{width:'100%',marginTop:'auto',padding:'8px',borderRadius:12,background:'#fef3c7',color:'#92400e',fontWeight:800,fontSize:12,textAlign:'center',cursor:'pointer',border:'1.5px solid #fcd34d',display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
-                      📷 Change
-                      <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>handleCustomImage(ai,e)}/>
+                    <p className="font-extrabold text-sm text-slate-800 mb-2">{item.word}</p>
+                    <label style={{width:'100%',marginTop:'auto',padding:'6px',borderRadius:10,background:'#fef3c7',color:'#92400e',fontWeight:800,fontSize:11,textAlign:'center',cursor:isAutoGenerating?'not-allowed':'pointer',border:'1.5px solid #fcd34d',opacity:isAutoGenerating?0.5:1}}>
+                      📷 手動替換
+                      <input type="file" accept="image/png,image/jpeg" style={{display:'none'}} disabled={isAutoGenerating} onChange={e=>handleCustomImage(ai,e)}/>
                     </label>
                   </div>
                 );
               })}
             </div>
-            {wordList.length>20&&(
-              <div style={{display:'flex',gap:12,alignItems:'center',marginTop:20,background:'white',borderRadius:50,padding:'10px 24px',border:`2px solid ${TEAL}`,fontWeight:800,color:TEAL_D}}>
-                <button onClick={()=>setEditPage(p=>Math.max(0,p-1))} disabled={editPage===0} style={{background:'none',border:'none',cursor:'pointer',fontSize:20,opacity:editPage===0?.3:1}}>◀</button>
-                <span style={{fontSize:14}}>Page {editPage+1} / {Math.ceil(wordList.length/20)}</span>
-                <button onClick={()=>setEditPage(p=>Math.min(Math.ceil(wordList.length/20)-1,p+1))} disabled={editPage===Math.ceil(wordList.length/20)-1} style={{background:'none',border:'none',cursor:'pointer',fontSize:20,opacity:editPage===Math.ceil(wordList.length/20)-1?.3:1}}>▶</button>
-              </div>
+            {/* Pagination helper */}
+            {wordList.length > 20 && (
+                <div className="flex gap-4 mt-6 items-center bg-white px-4 py-2 rounded-full shadow-sm border">
+                    <button onClick={()=>setEditPage(p=>Math.max(0,p-1))} disabled={editPage===0||isAutoGenerating} className="font-bold text-teal-700 disabled:opacity-30">Prev</button>
+                    <span className="font-bold text-sm text-slate-600">Page {editPage+1} / {Math.ceil(wordList.length/20)}</span>
+                    <button onClick={()=>setEditPage(p=>Math.min(Math.ceil(wordList.length/20)-1,p+1))} disabled={editPage===(Math.ceil(wordList.length/20)-1)||isAutoGenerating} className="font-bold text-teal-700 disabled:opacity-30">Next</button>
+                </div>
             )}
           </div>
         )}
 
         {/* ═══ PLAYING ═══ */}
         {screen==='playing'&&cur&&(
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',width:'100%',maxWidth:680}}>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',width:'100%',maxWidth:640}} className="anim-slide">
 
-            {/* ── FLASHCARD ── */}
+            {/* Polaroid (學習核心) */}
+            <div style={{position:'relative',background:'white',padding:12,paddingBottom:50,borderRadius:20,boxShadow:'0 10px 28px rgba(0,0,0,.15)',width:'100%',maxWidth:300,marginBottom:20}}>
+              <div style={{position:'absolute',top:-14,left:'50%',transform:'translateX(-50%)',width:28,height:28,borderRadius:'50%',background:'radial-gradient(circle at 35% 35%,#f87171,#b91c1c)',boxShadow:'0 3px 0 #7f1d1d',zIndex:30}}/>
+              <div style={{borderRadius:12,overflow:'hidden',aspectRatio:'1',position:'relative',border:'1px solid #f3f4f6'}}>
+                  <SafeImage key={currentIndex} src={cur.image} word={cur.word}/>
+              </div>
+              
+              {/* Controls */}
+              <div className="absolute bottom-2 left-0 right-0 px-3 flex justify-between items-center z-30">
+                {cur.translation && <div className="text-sm font-extrabold text-amber-900 bg-amber-100 px-3 py-1 rounded-full shadow-inner">{cur.translation}</div>}
+                <div className="flex gap-1.5">
+                    {gameMode==='spelling'&&<button onClick={giveHint} disabled={spellingOk} className="btn3d bg-amber-400 text-xs px-2 py-1 rounded-full font-bold shadow-[0_2px_0_#b45309]">💡Tip</button>}
+                    <button onClick={()=>snd.speak(cur.word)} className="btn3d bg-teal-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-[0_2px_0_#065f46]">🔊Play</button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── FLASHCARD MODE ── */}
             {gameMode==='flashcard'&&(
-              <div className="anim-slide" style={{width:'100%',background:'rgba(255,255,255,.6)',border:`8px solid ${TEAL}`,borderRadius:40,padding:'32px 24px',boxShadow:`0 12px 40px rgba(13,122,95,.2)`}}>
-                <div style={{maxWidth:360,margin:'0 auto',aspectRatio:'4/3',perspective:1000,cursor:'pointer'}} onClick={handleFlip}>
-                  <div style={{width:'100%',height:'100%',transformStyle:'preserve-3d',transition:'transform .5s',transform:flipped?'rotateY(180deg)':'none',borderRadius:24,boxShadow:'0 10px 30px rgba(0,0,0,.15)'}}>
-                    {/* Front */}
-                    <div style={{position:'absolute',inset:0,backfaceVisibility:'hidden',background:'white',borderRadius:24,border:`6px solid ${TEAL}`,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      {!cur.hasFetched?<div style={{width:40,height:40,border:'4px solid #fcd34d',borderTopColor:CORAL,borderRadius:'50%',animation:'spin 1s linear infinite'}}/>:<SafeImage key={`f-${currentIndex}`} src={cur.image} word={cur.word}/>}
-                      <div style={{position:'absolute',bottom:12,right:12,background:'rgba(0,0,0,.5)',color:'white',borderRadius:50,padding:'5px 14px',fontWeight:700,fontSize:12}}>Tap to flip 👆</div>
-                    </div>
-                    {/* Back */}
-                    <div style={{position:'absolute',inset:0,backfaceVisibility:'hidden',background:TEAL,borderRadius:24,border:`6px solid ${TEAL_D}`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',transform:'rotateY(180deg)',padding:24,color:'white'}}>
-                      <p style={{fontFamily:"'Fredoka One',cursive",fontSize:'clamp(2.2rem,7vw,3.8rem)',textAlign:'center',textShadow:'0 4px 0 rgba(0,0,0,.18)',margin:'0 0 12px',lineHeight:1.1,textTransform:'lowercase'}}>{cur.word}</p>
-                      {cur.translation&&<p style={{fontSize:20,fontWeight:800,background:'rgba(255,255,255,.2)',padding:'6px 20px',borderRadius:50,marginBottom:16}}>{cur.translation}</p>}
-                      <button onClick={e=>{e.stopPropagation();snd.speak(cur.word);}} style={{background:'white',color:TEAL,border:'none',borderRadius:50,padding:'10px 22px',fontWeight:900,fontSize:15,cursor:'pointer',boxShadow:'0 4px 0 rgba(0,0,0,.15)',display:'flex',alignItems:'center',gap:8}}>
-                        🔊 Listen / 發音
-                      </button>
-                    </div>
-                  </div>
+              <div className="w-full flex flex-col items-center">
+                <div style={{background:'rgba(255,255,255,.9)',border:`6px solid ${TEAL}`,borderRadius:24,padding:16,width:'100%',textAlign:'center',boxShadow:`0 8px 0 ${TEAL_D}`}} className="anim-slide">
+                  <p className="font-extrabold text-5xl text-teal-950 mb-2" style={{textTransform:'lowercase'}}>{cur.word}</p>
+                  {cur.translation&&<span className="text-xl font-bold bg-white text-slate-500 px-4 py-1 rounded-full shadow-inner border">{cur.translation}</span>}
                 </div>
-
-                {/* Flashcard buttons */}
-                <div style={{display:'flex',gap:12,marginTop:24,width:'100%'}}>
-                  <button onClick={prevCard} disabled={currentIndex===0} className="btn3d"
-                    style={{flex:1,background:'white',color:TEAL_D,border:`3px solid ${TEAL}`,borderRadius:18,padding:'16px 8px',fontWeight:900,fontSize:16,boxShadow:`0 6px 0 ${TEAL}`,opacity:currentIndex===0?.4:1}}>
-                    ← Previous<br/><span style={{fontSize:12,fontWeight:700,opacity:.7}}>上一張</span>
-                  </button>
-                  <button onClick={shuffleCards} className="btn3d"
-                    style={{background:'#fef3c7',color:'#92400e',border:'3px solid #fcd34d',borderRadius:18,padding:'16px 18px',fontWeight:900,fontSize:16,boxShadow:'0 6px 0 #f59e0b',minWidth:80}}>
-                    🔀<br/><span style={{fontSize:12,fontWeight:700}}>Shuffle</span>
-                  </button>
-                  <button onClick={nextCard} className="btn3d"
-                    style={{flex:1,background:TEAL,color:'white',border:'none',borderRadius:18,padding:'16px 8px',fontWeight:900,fontSize:16,boxShadow:`0 6px 0 ${TEAL_D}`}}>
-                    {currentIndex+1===wordList.length?'Finish ✓':'Next →'}<br/>
-                    <span style={{fontSize:12,fontWeight:700,opacity:.8}}>{currentIndex+1===wordList.length?'完成':'下一張'}</span>
-                  </button>
+                {/* Flashcard navigation */}
+                <div className="flex gap-4 mt-6 width-full justify-center">
+                    <button onClick={prevCard} disabled={currentIndex===0} className="btn3d px-6 py-3 bg-white text-slate-700 rounded-xl font-bold border shadow-[0_5px_0_#e2e8f0] disabled:opacity-40">← Prev</button>
+                    <button onClick={shuffleCards} className="btn3d px-4 py-3 bg-amber-400 text-amber-950 rounded-xl font-bold shadow-[0_5px_0_#b45309]">🔀</button>
+                    <button onClick={nextCard} className="btn3d px-6 py-3 bg-teal-600 text-white rounded-xl font-bold shadow-[0_5px_0_#065f46]">Next →</button>
                 </div>
-                <p style={{textAlign:'center',color:'#9ca3af',fontWeight:700,fontSize:12,marginTop:14}}>
-                  ⌨️ <kbd style={{background:'white',border:'1px solid #d1d5db',borderRadius:6,padding:'1px 6px'}}>Space</kbd> flip &nbsp; <kbd style={{background:'white',border:'1px solid #d1d5db',borderRadius:6,padding:'1px 6px'}}>← →</kbd> navigate
-                </p>
               </div>
             )}
 
             {/* ── GAME MODES ── */}
             {gameMode!=='flashcard'&&(
-              <div className="anim-slide" style={{
-                width:'100%',border:'8px solid rgba(255,255,255,.7)',borderRadius:40,padding:'28px 20px',
-                boxShadow:'0 12px 40px rgba(0,0,0,.1)',backdropFilter:'blur(8px)',
-                display:'flex',flexDirection:'column',alignItems:'center',
-                background:{spelling:'rgba(236,253,245,.8)',quiz:'rgba(255,251,235,.8)',listening:'rgba(239,246,255,.8)',truefalse:'rgba(255,247,237,.8)'}[gameMode]||'rgba(253,244,255,.8)'
-              }}>
-
-                {/* Polaroid card */}
-                <div style={{position:'relative',background:'white',padding:12,paddingBottom:52,borderRadius:20,boxShadow:'0 10px 28px rgba(0,0,0,.18)',width:'100%',maxWidth:280,marginBottom:24,transform:'rotate(-1.5deg)',transition:'transform .3s'}}
-                  onMouseEnter={e=>e.currentTarget.style.transform='rotate(0deg)'}
-                  onMouseLeave={e=>e.currentTarget.style.transform='rotate(-1.5deg)'}>
-                  {/* Pin */}
-                  <div style={{position:'absolute',top:-16,left:'50%',transform:'translateX(-50%)',width:28,height:28,borderRadius:'50%',background:'radial-gradient(circle at 35% 35%,#f87171,#b91c1c)',boxShadow:'0 3px 0 #7f1d1d',zIndex:30}}/>
-                  {/* Image */}
-                  <div style={{borderRadius:12,overflow:'hidden',aspectRatio:'1',position:'relative',border:'1px solid #f3f4f6'}}>
-                    {gameMode==='listening'?(
-                      <div className="listen-pulse" style={{position:'absolute',inset:0,background:TEAL,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:20}} onClick={()=>snd.speak(cur.word)}>
-                        <div style={{fontSize:64,marginBottom:8}}>👂</div>
-                        <p style={{color:'white',fontWeight:900,fontSize:16,margin:0}}>Tap to Listen</p>
-                        <p style={{color:'rgba(255,255,255,.7)',fontWeight:700,fontSize:12,margin:'4px 0 0'}}>點擊聆聽</p>
-                      </div>
-                    ):!cur.hasFetched?(
-                      <div style={{position:'absolute',inset:0,background:'#f9fafb',display:'flex',alignItems:'center',justifyContent:'center',zIndex:20}}>
-                        <div style={{width:36,height:36,border:'4px solid #fcd34d',borderTopColor:CORAL,borderRadius:'50%',animation:'spin 1s linear infinite'}}/>
-                      </div>
-                    ):(
-                      <SafeImage key={`g-${currentIndex}`} src={cur.image} word={cur.word}/>
-                    )}
-                  </div>
-                  {/* Buttons */}
-                  <div style={{position:'absolute',bottom:10,right:10,display:'flex',gap:8,zIndex:30}}>
-                    {gameMode==='spelling'&&(
-                      <button onClick={giveHint} disabled={spellingOk} className="btn3d" style={{background:'#fbbf24',color:'#78350f',border:'none',borderRadius:50,padding:'8px 14px',fontWeight:900,fontSize:13,boxShadow:'0 4px 0 #b45309',cursor:'pointer'}}>
-                        💡 Hint<br/><span style={{fontSize:10}}>-5 pts</span>
-                      </button>
-                    )}
-                    {gameMode!=='listening'&&gameMode!=='truefalse'&&(
-                      <button onClick={()=>snd.speak(cur.word)} className="btn3d" style={{background:TEAL,color:'white',border:'none',borderRadius:50,padding:'8px 14px',fontWeight:900,fontSize:13,boxShadow:`0 4px 0 ${TEAL_D}`,cursor:'pointer'}}>
-                        🔊 Play<br/><span style={{fontSize:10}}>Listen</span>
-                      </button>
-                    )}
-                  </div>
-                  {cur.translation&&<div style={{position:'absolute',bottom:10,left:10,background:'#fef3c7',color:'#92400e',borderRadius:50,padding:'4px 12px',fontWeight:800,fontSize:12,maxWidth:130,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',boxShadow:'0 2px 0 #fcd34d'}}>{cur.translation}</div>}
-                </div>
-
+              <div className="w-full p-4 rounded-3xl" style={{background:'rgba(255,255,255,.5)',border:'3px solid rgba(255,255,255,.7)'}}>
+                
                 {/* ── SPELLING ── */}
                 {gameMode==='spelling'&&(
                   <>
-                    {/* Answer slots */}
-                    <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:8,marginBottom:24,background:'rgba(0,0,0,.06)',padding:18,borderRadius:24,width:'100%',minHeight:80,boxShadow:'inset 0 4px 12px rgba(0,0,0,.08)'}}>
+                    <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:6,marginBottom:16,background:'white',padding:12,borderRadius:20,minHeight:68,boxShadow:'inset 0 3px 6px rgba(0,0,0,.05)'}}>
                       {cur.word.split('').map((_,i)=>{
-                        const isErr=wrongSlots.includes(i),filled=selected[i]!==null,isActive=!filled&&i===firstEmpty&&!spellingOk;
+                        const isErr=wrongSlots.includes(i),filled=selected[i]!==null;
                         return(
                           <div key={i} onClick={()=>filled&&!isErr&&!spellingOk&&unselectSlot(selected[i],i)}
-                            className={filled&&!isErr&&!spellingOk?'':''}
-                            style={{
-                              width:50,height:60,borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',
-                              fontFamily:"'Fredoka One',cursive",fontSize:28,transition:'all .2s',
-                              cursor:filled&&!isErr&&!spellingOk?'pointer':'default',
-                              ...(filled?(isErr?{background:'#fff1f2',boxShadow:'0 5px 0 #fda4af',border:'2.5px solid #fda4af',color:'#f43f5e'}:spellingOk?{background:'#4ade80',boxShadow:'0 5px 0 #16a34a',border:'2.5px solid #16a34a',color:'white'}:{background:'white',boxShadow:'0 5px 0 #d1d5db',border:'2.5px solid #e5e7eb',color:'#1f2937'})
-                              :(isActive?{background:'rgba(249,115,22,.12)',border:'2.5px dashed #f97316',boxShadow:'0 0 0 3px rgba(249,115,22,.2)'}:{background:'rgba(0,0,0,.06)',border:'2.5px dashed rgba(0,0,0,.15)'})),
+                            style={{width:40,height:50,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Fredoka One',cursive",fontSize:26,transition:'all .2s',
+                              ...(filled?(isErr?{background:'#fff1f2',border:'2px solid #fda4af',color:'#f43f5e'}:spellingOk?{background:'#4ade80',color:'white'}:{background:'#f9fafb',border:'2px solid #e5e7eb',color:'#1f2937',cursor:'pointer'})
+                              :{background:'rgba(0,0,0,.04)',border:'2px dashed rgba(0,0,0,.1)'}),
                             }} className={isErr?'anim-shake':spellingOk?'anim-pop':''}>
                             {filled?selected[i].c.toLowerCase():''}
                           </div>
                         );
                       })}
                     </div>
-                    {/* Tile pool */}
-                    <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:8,width:'100%',minHeight:64}}>
+                    <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:6,minHeight:56}}>
                       {shuffled.map(l=>(
-                        <button key={l.id} onClick={()=>clickTile(l)} disabled={spellingOk||transitioning}
-                          className="tile" style={{width:50,height:60,border:'none',color:'white',fontFamily:"'Fredoka One',cursive",fontSize:28,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        <button key={l.id} onClick={()=>clickTile(l)} disabled={spellingOk||transitioning} className="tile" style={{width:40,height:50,border:'none',color:'white',fontFamily:"'Fredoka One',cursive",fontSize:26,cursor:'pointer'}}>
                           {l.c.toLowerCase()}
                         </button>
                       ))}
@@ -1030,99 +996,51 @@ const App=()=>{
                 )}
 
                 {/* ── QUIZ / LISTENING ── */}
-                {(gameMode==='quiz'||gameMode==='listening')&&(
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,width:'100%'}}>
-                    {quizOpts.map((opt,i)=>{
-                      const isC=opt===quizCorrect,isW=wrongQuiz.includes(opt);
-                      const palette=[
-                        {bg:'#ecfdf5',border:TEAL,shadow:TEAL_D,text:TEAL_D},
-                        {bg:'#fffbeb',border:'#d97706',shadow:'#b45309',text:'#92400e'},
-                        {bg:'#eff6ff',border:'#2563eb',shadow:'#1d4ed8',text:'#1e3a8a'},
-                        {bg:'#fdf4ff',border:'#9333ea',shadow:'#7e22ce',text:'#6b21a8'},
-                      ][i];
-                      return(
-                        <button key={i} onClick={()=>onQuizSelect(opt)} disabled={transitioning||isW||!!quizCorrect}
-                          className={isC?'quiz-correct':isW?'quiz-wrong':'btn3d'}
-                          style={{background:isC?'#4ade80':isW?'#fff1f2':palette.bg,border:`3px solid ${isC?'#16a34a':isW?'#fda4af':palette.border}`,borderRadius:18,padding:'18px 12px',fontWeight:900,fontSize:20,color:isC?'#15803d':isW?'#f43f5e':palette.text,boxShadow:isC?'0 6px 0 #15803d':isW?'0 6px 0 #fda4af':`0 6px 0 ${palette.shadow}`,display:'flex',alignItems:'center',justifyContent:'center',gap:10,cursor:isW||!!quizCorrect?'default':'pointer',textDecoration:isW?'line-through':'none',opacity:isW?.5:1}}>
-                          <span style={{background:'rgba(0,0,0,.08)',borderRadius:8,padding:'2px 10px',fontSize:15,fontWeight:900}}>{i+1}</span>
-                          <span style={{textTransform:'lowercase'}}>{opt}</span>
+                {(gameMode==='quiz')&&(
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,width:'100%'}}>
+                    {quizOpts.map((opt,i)=>(
+                        <button key={i} onClick={()=>onQuizSelect(opt)} disabled={transitioning||wrongQuiz.includes(opt)||!!quizCorrect}
+                          className={`btn3d px-4 py-4 rounded-xl font-bold text-xl shadow-[0_5px_0_#e2e8f0] 
+                            ${opt===quizCorrect?'!bg-emerald-500 !text-white !shadow-[0_5px_0_#065f46]':wrongQuiz.includes(opt)?'opacity-30':''}
+                          `} style={{background:'white',border:'none',color:'#1f2937',textTransform:'lowercase'}}>
+                          {opt}
                         </button>
-                      );
-                    })}
+                    ))}
                   </div>
                 )}
-
-                {/* ── TRUE / FALSE ── */}
-                {gameMode==='truefalse'&&(
-                  <div style={{display:'flex',flexDirection:'column',alignItems:'center',width:'100%'}}>
-                    <div style={{background:'white',border:`4px solid ${TEAL}`,borderRadius:24,padding:'20px 40px',marginBottom:24,textAlign:'center',width:'100%',maxWidth:360,boxShadow:`0 6px 0 ${TEAL}`}}>
-                      <p style={{fontFamily:"'Fredoka One',cursive",fontSize:52,color:'#1f2937',margin:0,textTransform:'lowercase',lineHeight:1.1}}>{tfWord}</p>
+                 {(gameMode==='listening')&&(
+                    <div className="w-full flex flex-col items-center">
+                         <div className="p-10 bg-teal-600 rounded-full mb-6 listen-pulse cursor-pointer shadow-lg" onClick={()=>snd.speak(cur.word)}>
+                             <div className="text-6xl">👂</div>
+                         </div>
+                         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,width:'100%'}}>
+                            {quizOpts.map((opt,i)=>(
+                                <button key={i} onClick={()=>onQuizSelect(opt)} disabled={transitioning||wrongQuiz.includes(opt)||!!quizCorrect}
+                                className={`btn3d px-4 py-4 rounded-xl font-bold text-xl shadow-[0_5px_0_#e2e8f0] 
+                                    ${opt===quizCorrect?'!bg-emerald-500 !text-white !shadow-[0_5px_0_#065f46]':wrongQuiz.includes(opt)?'opacity-30':''}
+                                `} style={{background:'white',border:'none',color:'#1f2937',textTransform:'lowercase'}}>
+                                {opt}
+                                </button>
+                            ))}
+                         </div>
                     </div>
-                    <div style={{display:'flex',gap:16,width:'100%'}}>
-                      <button onClick={()=>onTFSelect(true)} disabled={transitioning} className="btn3d"
-                        style={{flex:1,background:'#22c55e',border:'4px solid #16a34a',borderRadius:24,padding:'24px 12px',color:'white',fontFamily:"'Fredoka One',cursive",fontSize:24,boxShadow:'0 10px 0 #15803d',display:'flex',flexDirection:'column',alignItems:'center',gap:8,cursor:'pointer'}}>
-                        <span style={{fontSize:56}}>✅</span>
-                        <span>Correct!</span>
-                        <span style={{fontSize:14,fontWeight:700,opacity:.85}}>正確 · Press O</span>
-                      </button>
-                      <button onClick={()=>onTFSelect(false)} disabled={transitioning} className="btn3d"
-                        style={{flex:1,background:'#f43f5e',border:'4px solid #e11d48',borderRadius:24,padding:'24px 12px',color:'white',fontFamily:"'Fredoka One',cursive",fontSize:24,boxShadow:'0 10px 0 #be123c',display:'flex',flexDirection:'column',alignItems:'center',gap:8,cursor:'pointer'}}>
-                        <span style={{fontSize:56}}>❌</span>
-                        <span>Wrong!</span>
-                        <span style={{fontSize:14,fontWeight:700,opacity:.85}}>錯誤 · Press X</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
+                 )}
               </div>
             )}
           </div>
         )}
 
-        {/* ═══ GAME OVER ═══ */}
-        {screen==='gameover'&&(
-          <div className="anim-slide" style={{background:'rgba(15,23,42,.9)',backdropFilter:'blur(20px)',border:'4px solid rgba(255,255,255,.1)',borderRadius:40,padding:'40px 32px',textAlign:'center',maxWidth:480,width:'100%',boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
-            <div style={{fontSize:80,marginBottom:12}}>💔</div>
-            <h2 style={{fontFamily:"'Fredoka One',cursive",fontSize:44,color:'#f87171',margin:'0 0 8px'}}>Game Over!</h2>
-            <p style={{color:'#94a3b8',fontWeight:700,marginBottom:8}}>You ran out of hearts!</p>
-            <p style={{color:'#94a3b8',fontWeight:700,marginBottom:28}}>Final Score: <span style={{color:'#fef08a',fontWeight:900,fontSize:28}}>{score}</span></p>
-            <div style={{display:'flex',gap:12}}>
-              <button onClick={()=>setScreen('home')} className="btn3d" style={{flex:1,background:'white',color:'#1f2937',border:'none',borderRadius:18,padding:'16px',fontWeight:900,fontSize:16,boxShadow:'0 6px 0 #cbd5e1'}}>🏠 Home</button>
-              <button onClick={()=>setScreen('selectMode')} className="btn3d" style={{flex:1,background:TEAL,color:'white',border:'none',borderRadius:18,padding:'16px',fontWeight:900,fontSize:16,boxShadow:`0 6px 0 ${TEAL_D}`}}>🔄 Try Again</button>
+        {/* ═══ GAME OVER / FINISHED ════ */}
+        {(screen==='gameover' || screen==='finished') && (
+            <div className="anim-slide p-10 bg-white rounded-3xl text-center shadow-xl border border-slate-100 max-w-sm w-full">
+                <div className="text-8xl mb-4">{screen==='finished'?'🏆':'💔'}</div>
+                <h2 className="font-extrabold text-3xl text-slate-800 mb-2">{screen==='finished'?'大功告成!':'再接再厲!'}</h2>
+                <p className="font-bold text-slate-500 mb-6">You score: <span className="text-amber-500 text-2xl font-black">{score}</span></p>
+                <div className="flex gap-4">
+                    <button onClick={()=>setScreen('home')} className="btn3d flex-1 px-6 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold border shadow-[0_4px_0_#e2e8f0]">Home</button>
+                    <button onClick={()=>setScreen('selectMode')} className="btn3d flex-1 px-6 py-2.5 bg-teal-600 text-white rounded-xl font-bold shadow-[0_4px_0_#065f46]">Retry</button>
+                </div>
             </div>
-            <Results/>
-          </div>
-        )}
-
-        {/* ═══ FINISHED ═══ */}
-        {screen==='finished'&&(
-          <div className="anim-slide" style={{background:'white',border:'8px solid #fbbf24',borderRadius:40,padding:'40px 32px',textAlign:'center',maxWidth:480,width:'100%',boxShadow:'0 20px 60px rgba(0,0,0,.15),0 0 0 16px rgba(251,191,36,.15)'}}>
-            <div style={{fontSize:88,marginBottom:8,filter:'drop-shadow(0 6px 12px rgba(245,158,11,.4))'}}>🏆</div>
-            <h2 style={{fontFamily:"'Fredoka One',cursive",fontSize:44,background:'linear-gradient(135deg,#f97316,#fbbf24)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',margin:'0 0 6px'}}>You Did It!</h2>
-            {/* Star rating */}
-            <div style={{fontSize:38,marginBottom:6,letterSpacing:4}}>
-              {gameMode!=='flashcard'&&[...Array(3)].map((_,i)=>(
-                <span key={i} className="star-anim" style={{animationDelay:`${i*180}ms`,opacity:i<(lives===3?3:lives===2?2:lives===1?1:0)?1:.2}}>⭐</span>
-              ))}
-              {gameMode==='flashcard'&&<span className="star-anim">🎉</span>}
-            </div>
-            <p style={{color:'#9ca3af',fontWeight:700,marginBottom:24}}>大功告成！All words complete!</p>
-            {gameMode!=='flashcard'&&(
-              <div style={{background:'#f9fafb',borderRadius:20,padding:20,marginBottom:20,textAlign:'left',border:'2px solid #f3f4f6'}}>
-                {[['⭐','Score / 分數',score,'#f97316'],['🔥','Best Combo / 最高連擊',`×${maxCombo}`,'#FF6670'],['⏱️','Time / 時間',fmt(elapsed),'#2563eb'],['❤️','Hearts Left / 剩餘愛心',`×${lives}`,'#f43f5e']].map(([emoji,label,val,color],i)=>(
-                  <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontWeight:800,color:'#374151',borderTop:i>0?'1.5px solid #f3f4f6':'none',paddingTop:i>0?12:0,marginTop:i>0?12:0}}>
-                    <span style={{fontSize:14}}>{emoji} {label}</span>
-                    <span style={{fontSize:20,color,fontWeight:900}}>{val}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={{display:'flex',gap:12}}>
-              <button onClick={()=>setScreen('home')} className="btn3d" style={{flex:1,background:'white',color:'#374151',border:`3px solid #e5e7eb`,borderRadius:18,padding:'16px',fontWeight:900,fontSize:16,boxShadow:'0 6px 0 #e5e7eb'}}>🏠 Home</button>
-              <button onClick={()=>setScreen('selectMode')} className="btn3d" style={{flex:1,background:TEAL,color:'white',border:'none',borderRadius:18,padding:'16px',fontWeight:900,fontSize:16,boxShadow:`0 6px 0 ${TEAL_D}`}}>🔄 Play Again</button>
-            </div>
-            <Results/>
-          </div>
         )}
 
       </main>
@@ -1137,6 +1055,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
-
-
-
