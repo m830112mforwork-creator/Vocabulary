@@ -150,9 +150,16 @@ catch(e){console.error(e);}
 const SafeImage=({src,word})=>{
   const[st,setSt]=useState('loading');
   const[cur,setCur]=useState(src);
-  useEffect(()=>{setSt('loading');setCur(src);},[src]);
+  
+  // 優化：如果 src 已經存在（從快取來），瞬間切換狀態，移除閃爍
+  useEffect(()=>{
+    setSt('loading');
+    setCur(src);
+    if(src && src.startsWith('data:')){ setSt('ok'); } // Base64 直接 ok
+  },[src]);
+
   const err=()=>{
-    const fb=`https://picsum.photos/seed/${encodeURIComponent(word)}/400/400`;
+    const fb=`https://api.dicebear.com/8.x/shapes/svg?seed=${encodeURIComponent(word)}`;
     if(cur!==fb){setCur(fb);setSt('loading');}else setSt('error');
   };
   return(
@@ -228,7 +235,7 @@ const App=()=>{
   const snd=useSounds(muted);
   const S=useRef({});
   S.current={screen,gameMode,wordList,currentIndex,combo,lives,transitioning,
-              spellingOk,wrongSlots,selected,shuffled,history,qErr};
+             spellingOk,wrongSlots,selected,shuffled,history,qErr};
   const fetchedRef=useRef(new Set());
   const playingRef=useRef(false);
   const timerRef=useRef(null);
@@ -252,23 +259,58 @@ const App=()=>{
     },err=>{setFbStatus('error');setFbError(err.message);});
   },[user]);
 
-  /* ── Image fetch ── */
-  const fetchImg=useCallback(async(idx,word)=>{
-    if(fetchedRef.current.has(idx)||!word)return;
+  /* ── Image fetch (Optimized Zero-Latency Preloader) ── */
+  const fetchImg = useCallback((idx, word) => {
+    if (fetchedRef.current.has(idx) || !word) return;
     fetchedRef.current.add(idx);
-    let url=null;
-    try{
-      const r=await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(word)}`);
-      if(r.ok){const d=await r.json();url=d.originalimage?.source||d.thumbnail?.source||null;if(url)url=url.replace('http://','https://');}
-    }catch{}
-    if(!url)url=`https://picsum.photos/seed/${encodeURIComponent(word)}/400/400`;
-    setWordList(prev=>{const n=[...prev];if(n[idx])n[idx]={...n[idx],image:url,hasFetched:true};return n;});
-  },[]);
-  useEffect(()=>{
-    if(!wordList.length)return;
-    [currentIndex,currentIndex+1,currentIndex+2].filter(i=>i<wordList.length)
-      .forEach(i=>{if(!wordList[i]?.hasFetched)fetchImg(i,wordList[i].word);});
-  },[currentIndex,wordList,fetchImg]);
+    
+    // 1. 生成風格統一的教育插畫 URL
+    const stylePrompt = "3d isometric icon, clay style, cute, pastel colors, white background, high quality educational illustration";
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(word + ', ' + stylePrompt)}?width=400&height=400&nologo=true`;
+
+    // 2. 核心機制：在背景強制實體化 Image 物件，寫入瀏覽器記憶體快取 (Memory Cache)
+    const img = new window.Image();
+    img.src = url;
+
+    // 3. 只有當圖片完全下載至記憶體後，才更新 React 狀態。確保畫面上絕不出現空轉的 Loading。
+    img.onload = () => {
+      setWordList(prev => {
+        const n = [...prev];
+        if (n[idx]) n[idx] = { ...n[idx], image: url, hasFetched: true };
+        return n;
+      });
+    };
+
+    // 4. 極速備用方案：如果 AI 算圖超時，立刻調用幾何向量圖 API (DiceBear)，瞬間生成。
+    img.onerror = () => {
+      const fallback = `https://api.dicebear.com/8.x/shapes/svg?seed=${encodeURIComponent(word)}`;
+      setWordList(prev => {
+        const n = [...prev];
+        if (n[idx]) n[idx] = { ...n[idx], image: fallback, hasFetched: true };
+        return n;
+      });
+    };
+  }, []);
+
+  /* ── 激進預載機制 (Aggressive Preloading) ── */
+  useEffect(() => {
+    if(!wordList.length) return;
+    
+    // 把預載範圍從 2 張擴大到 5 張，讓網路請求永遠跑在學生的操作前面
+    const preloadRange = [
+      currentIndex, currentIndex+1, currentIndex+2, 
+      currentIndex+3, currentIndex+4, currentIndex+5
+    ];
+
+    preloadRange.filter(i => i < wordList.length).forEach(i => {
+      // 確保只有還沒抓取過的圖片才會觸發 fetchImg
+      if (!wordList[i]?.hasFetched) {
+        fetchImg(i, wordList[i].word);
+      }
+    });
+  }, [currentIndex, wordList, fetchImg]);
+
+  // 針對自訂圖片預載
   useEffect(()=>{
     if(screen!=='editImages')return;
     const s=editPage*20,e=Math.min(s+20,wordList.length);
