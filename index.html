@@ -51,6 +51,34 @@
     .quiz-correct{animation:quizCorrect .5s ease forwards;border-color:#16a34a!important;box-shadow:0 6px 0 #15803d!important}
     .quiz-wrong{background:#fff1f2!important;color:#f43f5e!important;border-color:#fda4af!important;opacity:.5;pointer-events:none;text-decoration:line-through}
 
+    /* ── NEW: Stagger entrance ── */
+    @keyframes staggerIn{from{opacity:0;transform:translateY(28px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .stagger{animation:staggerIn .45s cubic-bezier(.16,1,.3,1) both}
+
+    /* ── NEW: Star bounce ── */
+    @keyframes starBounce{0%{transform:scale(0) rotate(-20deg)}60%{transform:scale(1.25) rotate(8deg)}80%{transform:scale(.9) rotate(-4deg)}100%{transform:scale(1) rotate(0deg)}}
+    .star-anim{display:inline-block;animation:starBounce .55s cubic-bezier(.36,.07,.19,.97) both}
+
+    /* ── NEW: Confetti piece ── */
+    @keyframes confettiFall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(90px) rotate(720deg);opacity:0}}
+    .confetti-piece{position:absolute;width:10px;height:10px;border-radius:2px;animation:confettiFall .9s ease-out forwards;pointer-events:none;z-index:99}
+
+    /* ── NEW: Heart break ── */
+    @keyframes heartBreak{0%{transform:scale(1)}30%{transform:scale(1.4)}60%{transform:scale(.6) rotate(15deg)}100%{transform:scale(.75) rotate(0deg);opacity:.2;filter:grayscale(1)}}
+    .heart-break{animation:heartBreak .5s cubic-bezier(.36,.07,.19,.97) forwards}
+
+    /* ── NEW: Combo glow ── */
+    @keyframes comboGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,102,112,.5)}50%{box-shadow:0 0 0 10px rgba(255,102,112,0)}}
+    .combo-glow{animation:comboGlow 1s ease-in-out infinite}
+
+    /* ── NEW: Pulse (listening mode) ── */
+    @keyframes listenPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.85}}
+    .listen-pulse{animation:listenPulse 1.4s ease-in-out infinite}
+
+    /* ── NEW: Score pop ── */
+    @keyframes scorePop{0%{transform:scale(1)}40%{transform:scale(1.35)}70%{transform:scale(.9)}100%{transform:scale(1)}}
+    .score-pop{animation:scorePop .4s cubic-bezier(.36,.07,.19,.97)}
+
     /* ── Card hover ── */
     .card-lift{transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .15s ease}
     .card-lift:hover{transform:translateY(-5px)}
@@ -194,6 +222,8 @@ const App=()=>{
   const[toast,setToast]=useState(null);
   const[wrongFlash,setWrongFlash]=useState(false);
   const[transitioning,setTransitioning]=useState(false);
+  const[confetti,setConfetti]=useState([]);
+  const[brokenHeart,setBrokenHeart]=useState(false);
 
   const snd=useSounds(muted);
   const S=useRef({});
@@ -299,10 +329,23 @@ const App=()=>{
   },[initLevel]);
 
   /* ── Correct ── */
+  const spawnConfetti=useCallback(()=>{
+    const colors=['#FF6670','#FFD000','#4ade80','#60a5fa','#f97316','#a78bfa','#fb7185'];
+    const pieces=Array.from({length:18},(_,i)=>({
+      id:Date.now()+i,color:colors[i%colors.length],
+      left:30+Math.random()*40,delay:Math.random()*.5,
+      rotate:Math.random()*360,size:8+Math.random()*8,
+      shape:Math.random()>.5?'circle':'square',
+    }));
+    setConfetti(pieces);
+    setTimeout(()=>setConfetti([]),1200);
+  },[]);
+
   const onCorrect=useCallback((wList,idx,mode)=>{
     const{transitioning:tr,combo:c,qErr:qe,history:hist}=S.current;
     if(tr)return;
     snd.success();
+    spawnConfetti();
     const nc=c+1,pts=10+nc*5;
     setScore(s=>s+pts);setCombo(nc);setMaxCombo(m=>Math.max(m,nc));
     setFloatPts({val:pts,id:Date.now()});
@@ -314,6 +357,7 @@ const App=()=>{
   const onWrong=useCallback((wList,idx)=>{
     if(S.current.transitioning)return;
     snd.error();setWrongFlash(true);setTimeout(()=>setWrongFlash(false),500);setCombo(0);setQErr(e=>e+1);
+    setBrokenHeart(true);setTimeout(()=>setBrokenHeart(false),600);
     setLives(prev=>{
       const next=prev-1;
       if(next<=0){
@@ -591,6 +635,15 @@ const App=()=>{
         </div>
       )}
 
+      {/* Confetti burst */}
+      {confetti.map(p=>(
+        <div key={p.id} className="confetti-piece fixed" style={{
+          left:`${p.left}%`,top:'42%',
+          background:p.color,borderRadius:p.shape==='circle'?'50%':'3px',
+          width:p.size,height:p.size,animationDelay:`${p.delay}s`,
+        }}/>
+      ))}
+
       {/* ═══ HEADER ═══ */}
       <header className="header sticky top-0 z-40 text-white">
         <div className="px-4 py-3 flex justify-between items-center max-w-5xl mx-auto gap-3 flex-wrap">
@@ -604,8 +657,10 @@ const App=()=>{
               <span style={{background:'rgba(255,255,255,.18)',padding:'4px 12px',borderRadius:50,fontSize:13,fontWeight:800}}>{currentIndex+1}/{wordList.length}</span>
               {gameMode!=='flashcard'&&<span style={{background:'rgba(255,255,255,.18)',padding:'4px 12px',borderRadius:50,fontSize:13,fontWeight:800,fontFamily:'monospace'}}>⏱ {fmt(elapsed)}</span>}
               {gameMode!=='flashcard'&&<span style={{color:'#fef08a',fontWeight:900,fontSize:18,textShadow:'0 2px 0 rgba(0,0,0,.2)'}}>⭐ {score}</span>}
-              {gameMode!=='flashcard'&&combo>=2&&<span style={{background:'#f97316',padding:'3px 10px',borderRadius:50,fontWeight:800,fontSize:12}}>🔥 ×{combo}</span>}
-              {gameMode!=='flashcard'&&<span style={{fontSize:20}}>{[0,1,2].map(i=><span key={i} style={{opacity:i<lives?1:.2,filter:i<lives?'none':'grayscale(1)'}}>❤️</span>)}</span>}
+              {gameMode!=='flashcard'&&combo>=2&&<span className="combo-glow" style={{background:'#FF6670',padding:'3px 12px',borderRadius:50,fontWeight:800,fontSize:13,display:'flex',alignItems:'center',gap:4}}>
+                {combo>=10?'🔥🔥🔥':combo>=5?'🔥🔥':'🔥'} ×{combo}
+              </span>}
+              {gameMode!=='flashcard'&&<span style={{fontSize:20,display:'flex',gap:2}}>{[0,1,2].map(i=><span key={i} className={i===lives&&brokenHeart?'heart-break':''} style={{opacity:i<lives?1:.18,filter:i<lives?'none':'grayscale(1)',transition:'opacity .3s'}}>❤️</span>)}</span>}
               <button onClick={()=>setMuted(!muted)} className="btn3d" style={{background:muted?'#f43f5e':'rgba(255,255,255,.18)',border:'none',color:'white',padding:'7px 12px',borderRadius:12,fontWeight:800,fontSize:13,cursor:'pointer',boxShadow:muted?'0 4px 0 #be123c':'0 4px 0 rgba(0,0,0,.15)'}}>
                 {muted?'🔇 Mute':'🔊 Sound'}
               </button>
@@ -669,7 +724,7 @@ const App=()=>{
                     {bg:'#fff1f2',border:'#e11d48',shadow:'#be123c',icon:'#ffe4e6',emoji:'📕'},
                   ][i%5];
                   return(
-                    <button key={u.id} onClick={()=>openUnit(u)} className="card-lift" style={{background:palette.bg,border:`3px solid ${palette.border}`,borderRadius:24,boxShadow:`0 8px 0 ${palette.shadow}`,padding:28,display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center',cursor:'pointer'}}>
+                    <button key={u.id} onClick={()=>openUnit(u)} className="card-lift stagger" style={{background:palette.bg,border:`3px solid ${palette.border}`,borderRadius:24,boxShadow:`0 8px 0 ${palette.shadow}`,padding:28,display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center',cursor:'pointer',animationDelay:`${i*90}ms`}}>
                       <div style={{width:72,height:72,borderRadius:20,background:palette.icon,display:'flex',alignItems:'center',justifyContent:'center',fontSize:40,marginBottom:14,boxShadow:`0 4px 0 ${palette.shadow}`}}>
                         {palette.emoji}
                       </div>
@@ -911,7 +966,7 @@ const App=()=>{
                   {/* Image */}
                   <div style={{borderRadius:12,overflow:'hidden',aspectRatio:'1',position:'relative',border:'1px solid #f3f4f6'}}>
                     {gameMode==='listening'?(
-                      <div style={{position:'absolute',inset:0,background:TEAL,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:20}} onClick={()=>snd.speak(cur.word)}>
+                      <div className="listen-pulse" style={{position:'absolute',inset:0,background:TEAL,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:20}} onClick={()=>snd.speak(cur.word)}>
                         <div style={{fontSize:64,marginBottom:8}}>👂</div>
                         <p style={{color:'white',fontWeight:900,fontSize:16,margin:0}}>Tap to Listen</p>
                         <p style={{color:'rgba(255,255,255,.7)',fontWeight:700,fontSize:12,margin:'4px 0 0'}}>點擊聆聽</p>
@@ -1044,10 +1099,17 @@ const App=()=>{
           <div className="anim-slide" style={{background:'white',border:'8px solid #fbbf24',borderRadius:40,padding:'40px 32px',textAlign:'center',maxWidth:480,width:'100%',boxShadow:'0 20px 60px rgba(0,0,0,.15),0 0 0 16px rgba(251,191,36,.15)'}}>
             <div style={{fontSize:88,marginBottom:8,filter:'drop-shadow(0 6px 12px rgba(245,158,11,.4))'}}>🏆</div>
             <h2 style={{fontFamily:"'Fredoka One',cursive",fontSize:44,background:'linear-gradient(135deg,#f97316,#fbbf24)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',margin:'0 0 6px'}}>You Did It!</h2>
+            {/* Star rating */}
+            <div style={{fontSize:38,marginBottom:6,letterSpacing:4}}>
+              {gameMode!=='flashcard'&&[...Array(3)].map((_,i)=>(
+                <span key={i} className="star-anim" style={{animationDelay:`${i*180}ms`,opacity:i<(lives===3?3:lives===2?2:lives===1?1:0)?1:.2}}>⭐</span>
+              ))}
+              {gameMode==='flashcard'&&<span className="star-anim">🎉</span>}
+            </div>
             <p style={{color:'#9ca3af',fontWeight:700,marginBottom:24}}>大功告成！All words complete!</p>
             {gameMode!=='flashcard'&&(
               <div style={{background:'#f9fafb',borderRadius:20,padding:20,marginBottom:20,textAlign:'left',border:'2px solid #f3f4f6'}}>
-                {[['⭐','Score / 分數',score,'#f97316'],['⏱️','Time / 時間',fmt(elapsed),'#2563eb'],['❤️','Hearts Left / 剩餘愛心',`×${lives}`,'#f43f5e']].map(([emoji,label,val,color],i)=>(
+                {[['⭐','Score / 分數',score,'#f97316'],['🔥','Best Combo / 最高連擊',`×${maxCombo}`,'#FF6670'],['⏱️','Time / 時間',fmt(elapsed),'#2563eb'],['❤️','Hearts Left / 剩餘愛心',`×${lives}`,'#f43f5e']].map(([emoji,label,val,color],i)=>(
                   <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontWeight:800,color:'#374151',borderTop:i>0?'1.5px solid #f3f4f6':'none',paddingTop:i>0?12:0,marginTop:i>0?12:0}}>
                     <span style={{fontSize:14}}>{emoji} {label}</span>
                     <span style={{fontSize:20,color,fontWeight:900}}>{val}</span>
